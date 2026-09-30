@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "avventura": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["tools/adv_mcp.py"]
+    }
+  }
+}

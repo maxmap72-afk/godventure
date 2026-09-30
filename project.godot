@@ -1,0 +1,55 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Il Segreto del Faro"
+config/description="Demo game of Avventura, a point & click adventure engine for Godot."
+run/main_scene="res://addons/avventura/core/adv_main.tscn"
+config/features=PackedStringArray("4.4", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Adv="*res://addons/avventura/core/adv.gd"
+
+[avventura]
+
+general/game_dir="res://game"
+gui/scene="res://addons/avventura/gui/two_click_gui.tscn"
+gui/show_title_menu=true
+text/seconds_per_character=0.05
+text/min_seconds=1.5
+interaction/walk_before_look=false
+dialog/player_says_options=true
+debug/remote_control=false
+debug/remote_port=7777
+debug/console=true
+debug/show_walk_areas=false
+gui/language="it"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/avventura/plugin.cfg")
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -1,0 +1,49 @@
+# Soluzione completa del gioco demo.
+# Ogni riga è un comando (lo stesso linguaggio della console di debug);
+# "expect" fallisce se la condizione è falsa.
+# Esegui: python3 tools/adv.py test
+
+expect room() == "spiaggia"
+expect said("faro è spento")
+
+look cartello
+expect said("Beppe")
+
+pick pala
+expect has(pala)
+expect not shown(pala)
+
+use pala on sabbia
+expect has(vermi)
+expect shown(buca)
+
+walk verso_molo
+expect room() == "molo"
+
+talk to beppe
+choose "Chi sei"
+choose "faro"
+expect beppe_vuole_vermi
+choose "vermi"
+expect said("sabbia bagnata")
+choose "Ciao"
+
+give vermi to beppe
+expect has(chiave)
+expect not has(vermi)
+
+open barile
+expect state(barile) == "aperto"
+pick fiammiferi
+expect has(fiammiferi)
+
+walk verso_spiaggia
+expect room() == "spiaggia"
+use chiave on porta
+expect faro_aperto
+use porta
+expect room() == "faro"
+
+use fiammiferi on lanterna
+expect state(lanterna) == "accesa"
+expect ended()

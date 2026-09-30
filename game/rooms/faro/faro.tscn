@@ -1,0 +1,103 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_room.gd" id="1_room"]
+[ext_resource type="Texture2D" path="res://game/rooms/faro/faro.svg" id="2_bg"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_walk_area.gd" id="3_walk"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_hotspot.gd" id="4_hotspot"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_entry.gd" id="5_entry"]
+[ext_resource type="Texture2D" path="res://game/rooms/faro/lanterna.svg" id="6_lamp"]
+[ext_resource type="Texture2D" path="res://game/rooms/faro/lanterna_accesa.svg" id="7_lamp_lit"]
+
+[node name="Faro" type="Node2D"]
+script = ExtResource("1_room")
+display_name = "Dentro il faro"
+far_y = 495.0
+far_scale = 0.9
+near_y = 712.0
+near_scale = 1.1
+
+[node name="Background" type="Sprite2D" parent="."]
+z_index = -100
+texture = ExtResource("2_bg")
+centered = false
+
+[node name="WalkArea" type="Polygon2D" parent="."]
+script = ExtResource("3_walk")
+color = Color(0.2, 0.9, 0.4, 0.25)
+polygon = PackedVector2Array(30, 575, 240, 495, 990, 495, 1045, 712, 30, 712)
+
+[node name="Piedistallo" type="Polygon2D" parent="WalkArea"]
+color = Color(0.95, 0.25, 0.2, 0.3)
+polygon = PackedVector2Array(572, 508, 708, 508, 712, 540, 568, 540)
+
+[node name="Tavolo" type="Polygon2D" parent="WalkArea"]
+color = Color(0.95, 0.25, 0.2, 0.3)
+polygon = PackedVector2Array(296, 540, 454, 540, 454, 574, 296, 574)
+
+[node name="Finestra" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Finestra"
+default_verb = "look"
+walk_before = false
+
+[node name="Shape" type="CollisionPolygon2D" parent="Finestra"]
+polygon = PackedVector2Array(560, 330, 560, 160, 600, 110, 640, 96, 680, 110, 720, 160, 720, 330)
+
+[node name="Scala" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Scala a chiocciola"
+default_verb = "look"
+walk_to = Vector2(1000, 640)
+face = "right"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Scala"]
+polygon = PackedVector2Array(1008, 626, 1160, 614, 1250, 190, 1230, 120, 1180, 190, 1010, 600)
+
+[node name="TavoloHotspot" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+hotspot_id = "tavolo"
+display_name = "Tavolo"
+description = "Un tavolo con una lattina d'olio per la lanterna. Almeno il combustibile c'è."
+default_verb = "look"
+walk_to = Vector2(375, 600)
+face = "up"
+
+[node name="Shape" type="CollisionPolygon2D" parent="TavoloHotspot"]
+polygon = PackedVector2Array(300, 436, 450, 436, 450, 570, 300, 570)
+
+[node name="Lanterna" type="Area2D" parent="."]
+position = Vector2(640, 532)
+script = ExtResource("4_hotspot")
+display_name = "Lanterna"
+walk_to = Vector2(-120, 40)
+face = "right"
+
+[node name="state_spenta" type="Sprite2D" parent="Lanterna"]
+texture = ExtResource("6_lamp")
+offset = Vector2(0, -128)
+
+[node name="state_accesa" type="Sprite2D" parent="Lanterna"]
+visible = false
+texture = ExtResource("7_lamp_lit")
+offset = Vector2(0, -128)
+
+[node name="Uscita" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Uscita"
+exit_to = "spiaggia"
+exit_entry = "faro"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Uscita"]
+polygon = PackedVector2Array(40, 640, 40, 430, 110, 380, 180, 430, 180, 640)
+
+[node name="WalkTo" type="Marker2D" parent="Uscita"]
+position = Vector2(110, 662)
+
+[node name="spiaggia" type="Marker2D" parent="."]
+position = Vector2(170, 660)
+script = ExtResource("5_entry")
+face = "right"
+
+[node name="default" type="Marker2D" parent="."]
+position = Vector2(420, 640)
+script = ExtResource("5_entry")

@@ -1,0 +1,6 @@
+# Normalize line endings; Godot files are text.
+* text=auto eol=lf
+*.png binary
+*.ogg binary
+*.wav binary
+*.translation binary

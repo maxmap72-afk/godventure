@@ -1,0 +1,34 @@
+character max "Max":
+    color = #88ccff
+
+character sam "Sam":
+    color = #ffcc88
+    room = b
+    at = spot
+
+on talk sam:
+    dialog sam_d
+
+dialog sam_d:
+    on start:
+        sam: Hi.
+    option "Once only" once:
+        sam: Only once.
+    option secret "Secret" hidden:
+        sam: You found the secret.
+    option "Deeper":
+        dialog sam_sub
+        sam: Back at top.
+    option "Conditional" if counter >= 3:
+        sam: Counter is big.
+    option "Bye":
+        sam: Bye.
+        end
+
+dialog sam_sub:
+    option "Sub back":
+        sam: Going back.
+        back
+    option "Sub end":
+        sam: Ending all.
+        end

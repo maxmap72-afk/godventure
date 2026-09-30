@@ -1,0 +1,71 @@
+# ================================================================
+#  Stanza: Spiaggia
+# ================================================================
+# Gli script scritti qui valgono solo in questa stanza.
+
+on look cartello:
+    nina: C'è scritto: "FARO CHIUSO. Per la chiave rivolgersi a Beppe, al molo."
+
+on look faro:
+    nina: Il faro di Punta Gallina. La lanterna in cima è spenta.
+
+on look mare:
+    nina: Il mare è calmo. Stanotte però sarà buio pesto.
+
+on look porta:
+    if faro_aperto:
+        nina: La porta del faro è aperta.
+    else:
+        nina: Una robusta porta di legno. È chiusa a chiave.
+
+on use porta:
+    if faro_aperto:
+        goto faro
+    else:
+        nina: È chiusa a chiave.
+
+on open porta:
+    if faro_aperto:
+        goto faro
+    else:
+        nina: È chiusa a chiave.
+
+on use chiave on porta:
+    nina: Proviamo...
+    state porta aperta
+    set faro_aperto = true
+    inventory remove chiave
+    nina: Si è aperta!
+
+
+on look sabbia:
+    if shown(buca):
+        nina: Ho già scavato qui. Il resto dei vermi può restare dov'è.
+    else:
+        nina: Sabbia bagnata. Chissà cosa c'è sotto.
+
+on use sabbia:
+    nina: Non ho intenzione di scavare a mani nude.
+
+on use pala on sabbia:
+    if shown(buca):
+        nina: Ho già abbastanza vermi.
+    else:
+        anim scava
+        show buca
+        inventory add vermi
+        nina: Vermi! Viscidi, ma forse utili.
+
+
+on look granchio:
+    nina: Un granchio. Mi guarda storto.
+
+on talk granchio:
+    cycle:
+        nina: Ciao, granchio!
+        nina: Sai dove posso trovare dei vermi?
+        nina: Va bene, ho capito. Non sei di molte parole.
+    granchio: ...
+
+on pick granchio:
+    nina: Preferisco tenermi tutte le dita.

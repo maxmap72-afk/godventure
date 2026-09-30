@@ -1,0 +1,55 @@
+# ================================================================
+#  Stanza: Molo
+# ================================================================
+
+on enter:
+    if first:
+        nina: Il molo dei pescatori. E quello dev'essere Beppe.
+
+on look mare:
+    nina: L'acqua è scura. Da qui non si vede il fondo.
+
+on look barca:
+    nina: La barca di Beppe. Si chiama "Speranza".
+
+on use barca:
+    nina: Senza remi e senza luce del faro non vado da nessuna parte.
+
+on look gabbiano:
+    nina: Un gabbiano. Mi fissa con aria di sfida.
+
+on talk gabbiano:
+    gabbiano: Crà!
+    nina: ...lo prendo come un no.
+
+on look corda:
+    nina: Una corda arrotolata. Non mi serve, per ora.
+
+on pick corda:
+    nina: È di Beppe. Meglio non toccarla.
+
+
+on look barile:
+    if state(barile) == "aperto":
+        nina: Il barile è aperto.
+    else:
+        nina: Un vecchio barile. Il coperchio sembra solo appoggiato.
+
+on open barile:
+    if state(barile) == "aperto":
+        nina: È già aperto.
+    else:
+        state barile aperto
+        show fiammiferi
+        nina: Dentro c'era... una scatola di fiammiferi!
+
+on use barile:
+    if state(barile) == "aperto":
+        nina: È già aperto.
+    else:
+        state barile aperto
+        show fiammiferi
+        nina: Dentro c'era... una scatola di fiammiferi!
+
+on close barile:
+    nina: Meglio lasciarlo aperto.

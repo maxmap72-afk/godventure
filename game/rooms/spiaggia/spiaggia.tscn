@@ -1,0 +1,160 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_room.gd" id="1_room"]
+[ext_resource type="Texture2D" path="res://game/rooms/spiaggia/spiaggia.svg" id="2_bg"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_walk_area.gd" id="3_walk"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_hotspot.gd" id="4_hotspot"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_entry.gd" id="5_entry"]
+[ext_resource type="Texture2D" path="res://game/rooms/spiaggia/pala.svg" id="6_pala"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_character.gd" id="7_char"]
+[ext_resource type="Texture2D" path="res://game/rooms/spiaggia/granchio.svg" id="8_crab"]
+[ext_resource type="Texture2D" path="res://game/rooms/spiaggia/buca.svg" id="9_hole"]
+
+[node name="Spiaggia" type="Node2D"]
+script = ExtResource("1_room")
+display_name = "Spiaggia"
+far_y = 495.0
+far_scale = 0.8
+near_y = 712.0
+near_scale = 1.08
+
+[node name="Background" type="Sprite2D" parent="."]
+z_index = -100
+texture = ExtResource("2_bg")
+centered = false
+
+[node name="WalkArea" type="Polygon2D" parent="."]
+script = ExtResource("3_walk")
+color = Color(0.2, 0.9, 0.4, 0.25)
+polygon = PackedVector2Array(10, 582, 300, 578, 345, 502, 1275, 494, 1275, 712, 10, 712)
+
+[node name="Scoglio" type="Polygon2D" parent="WalkArea"]
+color = Color(0.95, 0.25, 0.2, 0.3)
+polygon = PackedVector2Array(352, 640, 378, 618, 462, 616, 492, 640, 464, 666, 378, 668)
+
+[node name="Buca" type="Sprite2D" parent="."]
+visible = false
+z_index = -50
+position = Vector2(900, 490)
+texture = ExtResource("9_hole")
+
+[node name="Mare" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Mare"
+default_verb = "look"
+walk_before = false
+
+[node name="Shape" type="CollisionPolygon2D" parent="Mare"]
+polygon = PackedVector2Array(260, 330, 1280, 330, 1280, 460, 640, 462, 290, 470)
+
+[node name="Faro" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Faro"
+default_verb = "look"
+walk_to = Vector2(262, 588)
+
+[node name="Shape" type="CollisionPolygon2D" parent="Faro"]
+polygon = PackedVector2Array(112, 522, 228, 522, 206, 110, 222, 98, 206, 50, 170, 14, 134, 50, 118, 98, 134, 110)
+
+[node name="Porta" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Porta del faro"
+walk_to = Vector2(178, 590)
+face = "up"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Porta"]
+polygon = PackedVector2Array(148, 524, 148, 470, 170, 448, 192, 470, 192, 524)
+
+[node name="state_aperta" type="Polygon2D" parent="Porta"]
+visible = false
+color = Color(0.08, 0.06, 0.07, 1)
+polygon = PackedVector2Array(150, 522, 150, 470, 170, 450, 190, 470, 190, 522)
+
+[node name="Cartello" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Cartello"
+default_verb = "look"
+walk_to = Vector2(565, 540)
+face = "up"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Cartello"]
+polygon = PackedVector2Array(510, 400, 612, 400, 612, 452, 568, 452, 568, 524, 553, 524, 553, 452, 510, 452)
+
+[node name="Sabbia" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Sabbia bagnata"
+walk_to = Vector2(900, 532)
+face = "up"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Sabbia"]
+polygon = PackedVector2Array(780, 486, 810, 468, 900, 461, 990, 468, 1020, 486, 990, 504, 900, 511, 810, 504)
+
+[node name="Scoglio" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Scoglio"
+description = "Uno scoglio levigato dal mare. Ci sono passata accanto mille volte."
+default_verb = "look"
+walk_to = Vector2(420, 692)
+
+[node name="Shape" type="CollisionPolygon2D" parent="Scoglio"]
+polygon = PackedVector2Array(354, 642, 372, 614, 420, 600, 468, 614, 486, 642, 452, 670, 390, 670)
+
+[node name="Palma" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Palma"
+description = "Una palma. Niente noci di cocco, purtroppo."
+default_verb = "look"
+walk_to = Vector2(985, 520)
+
+[node name="Shape" type="CollisionPolygon2D" parent="Palma"]
+polygon = PackedVector2Array(930, 250, 1150, 250, 1150, 330, 1040, 300, 1030, 470, 996, 470, 1010, 330)
+
+[node name="Pala" type="Area2D" parent="."]
+position = Vector2(1080, 596)
+script = ExtResource("4_hotspot")
+display_name = "Pala"
+description = "Una vecchia pala piantata nella sabbia."
+walk_to = Vector2(-60, 8)
+pickup_item = "pala"
+
+[node name="Sprite" type="Sprite2D" parent="Pala"]
+texture = ExtResource("6_pala")
+offset = Vector2(0, -44)
+
+[node name="Granchio" type="Area2D" parent="."]
+position = Vector2(760, 650)
+script = ExtResource("7_char")
+display_name = "Granchio"
+walk_to = Vector2(-80, 6)
+text_color = Color(1, 0.6, 0.5, 1)
+height = 48.0
+
+[node name="Sprite" type="Sprite2D" parent="Granchio"]
+texture = ExtResource("8_crab")
+offset = Vector2(0, -22)
+
+[node name="VersoMolo" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+hotspot_id = "verso_molo"
+display_name = "Verso il molo"
+exit_to = "molo"
+
+[node name="Shape" type="CollisionPolygon2D" parent="VersoMolo"]
+polygon = PackedVector2Array(1160, 530, 1280, 510, 1280, 715, 1150, 715)
+
+[node name="WalkTo" type="Marker2D" parent="VersoMolo"]
+position = Vector2(1255, 612)
+
+[node name="default" type="Marker2D" parent="."]
+position = Vector2(640, 612)
+script = ExtResource("5_entry")
+
+[node name="molo" type="Marker2D" parent="."]
+position = Vector2(1210, 612)
+script = ExtResource("5_entry")
+face = "left"
+
+[node name="faro" type="Marker2D" parent="."]
+position = Vector2(180, 596)
+script = ExtResource("5_entry")
+face = "down"

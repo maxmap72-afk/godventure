@@ -1,0 +1,47 @@
+# ================================================================
+#  Stanza: Dentro il faro
+# ================================================================
+
+on enter:
+    if first:
+        nina: Che buio... e che odore di muffa.
+
+on look finestra:
+    nina: Il sole sta per tramontare. Devo sbrigarmi.
+
+on look scala:
+    nina: Una scala a chiocciola che sale fino in cima.
+
+on use scala:
+    nina: Prima la lanterna, poi il panorama.
+
+on look lanterna:
+    if state(lanterna) == "accesa":
+        nina: Brilla come un piccolo sole!
+    else:
+        nina: La grande lanterna del faro. C'è l'olio, manca solo una fiamma.
+        if not has(fiammiferi):
+            option on beppe.fiammiferi
+
+on use lanterna:
+    if state(lanterna) == "accesa":
+        nina: È già accesa.
+    else:
+        nina: Mi serve qualcosa per accenderla.
+        if not has(fiammiferi):
+            option on beppe.fiammiferi
+
+on use fiammiferi on lanterna:
+    cutscene:
+        face lanterna
+        nina: Speriamo che funzionino...
+        wait 0.5
+        state lanterna accesa
+        camera shake 0.4
+        wait 1
+        nina(happy): Si è accesa!
+        fade out 1.5
+        narrator: Quella notte il faro di Punta Gallina tornò a brillare.
+        narrator: E Beppe pescò il pesce più grosso della sua vita.
+        narrator: FINE. Grazie per aver giocato!
+        end_game

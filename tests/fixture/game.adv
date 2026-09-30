@@ -1,0 +1,27 @@
+# Engine regression fixture (not a real game). Run with:
+#   godot --headless --path . -- --adv-game-dir=res://tests/fixture --adv-test
+title "Fixture"
+player max
+start a at default
+
+var counter = 0
+var log = ""
+var started = false
+
+on start:
+    set started = true
+
+function add(n):
+    set counter += n
+    if counter > 100:
+        stop
+    set log = log + "a"
+
+function greet(who):
+    max: Hello {who}!
+
+on look *:
+    max: global look
+
+on * *:
+    max: global fallback

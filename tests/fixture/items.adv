@@ -1,0 +1,10 @@
+item gem "Gem"
+item coin "Coin":
+    description = A shiny coin.
+item note "Note"
+
+on look gem:
+    max: A gem.
+
+on use coin on gem:
+    max: Combined.

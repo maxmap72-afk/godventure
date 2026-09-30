@@ -1,0 +1,71 @@
+# ================================================================
+#  Personaggi
+# ================================================================
+# Senza una scena in game/characters/<id>/<id>.tscn il motore usa un
+# "manichino" disegnato con questi colori: perfetto per i prototipi.
+
+character nina "Nina":
+    color = #8fd8ff
+    body = #2f8f9d
+    hair = #6b3b22
+
+character beppe "Beppe":
+    color = #ffd166
+    body = #e9b949
+    hair = #d9d9d9
+    room = molo
+    at = posto_beppe
+
+
+# ---------------------------------------------------------------
+# Beppe, il pescatore
+# ---------------------------------------------------------------
+
+on look beppe:
+    nina: È Beppe, il pescatore. Dicono che sappia tutto dell'isola.
+
+on talk beppe:
+    dialog beppe
+
+on give vermi to beppe:
+    nina: Ecco i tuoi vermi, Beppe.
+    inventory remove vermi
+    beppe(happy): Magnifico! Stasera si mangia pesce.
+    beppe: Un patto è un patto. Ecco la chiave del faro.
+    inventory add chiave
+    option off beppe.vermi
+    option off beppe.faro
+
+on give * to beppe:
+    beppe: No grazie, non mi serve.
+
+
+dialog beppe:
+    on start:
+        once:
+            beppe: Ehilà, ragazza! Non si vedono molti turisti da queste parti.
+        beppe: Che ti serve?
+
+    option "Chi sei?" once:
+        beppe: Mi chiamo Beppe. Pesco intorno a quest'isola da cinquant'anni.
+        beppe: E da tre notti non prendo un pesce. Colpa del faro spento!
+
+    option faro "Il faro è spento. Posso aiutarti?":
+        if has(chiave) or faro_aperto:
+            beppe: Hai già la chiave, che aspetti?
+        else:
+            beppe: La chiave del faro ce l'ho io... ma non te la do gratis.
+            beppe: Portami dei vermi e ne riparliamo. Senza esca non si pesca!
+            set beppe_vuole_vermi = true
+            option on beppe.vermi
+
+    option vermi "Dove trovo dei vermi?" hidden once:
+        beppe: Sotto la sabbia bagnata, vicino alla riva.
+        beppe: Ma ti servirà qualcosa per scavare.
+
+    option fiammiferi "Hai dei fiammiferi?" hidden once:
+        beppe: Fiammiferi? Forse nel mio vecchio barile, qui sul molo.
+
+    option "Ciao, Beppe.":
+        beppe: Buona fortuna, ragazza!
+        end

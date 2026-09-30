@@ -1,0 +1,46 @@
+keys,en,it
+Esc: skip,Esc: skip,Esc: salta
+Give %s to %s,Give %s to %s,Dai %s a %s
+Use %s with %s,Use %s with %s,Usa %s con %s
+New game,New game,Nuova partita
+Continue,Continue,Continua
+Load,Load,Carica
+Save,Save,Salva
+Settings,Settings,Impostazioni
+Quit,Quit,Esci
+Resume,Resume,Riprendi
+Main menu,Main menu,Menu principale
+Pause,Pause,Pausa
+Game saved,Game saved,Partita salvata
+You can't save now,You can't save now,Non puoi salvare adesso
+Back,Back,Indietro
+No saved games,No saved games,Nessuna partita salvata
+Slot %d,Slot %d,Slot %d
+empty,empty,vuoto
+Text speed,Text speed,Velocità del testo
+Auto-advance text,Auto-advance text,Testo automatico
+Music volume,Music volume,Volume musica
+Effects volume,Effects volume,Volume effetti
+Fullscreen,Fullscreen,Schermo intero
+Command (help for the list),Command (help for the list),Comando (help per l'elenco)
+Inventory,Inventory,Inventario
+Inventory is empty,Inventory is empty,L'inventario è vuoto
+Nothing special.,Nothing special.,Niente di speciale.
+No answer.,No answer.,Nessuna risposta.
+I can't pick that up.,I can't pick that up.,Non posso prenderlo.
+It doesn't open.,It doesn't open.,Non si apre.
+It doesn't close.,It doesn't close.,Non si chiude.
+It won't move.,It won't move.,Non si muove.
+That doesn't work.,That doesn't work.,Non funziona.
+Walk to,Walk to,Vai a
+Give,Give,Dai
+Pick up,Pick up,Raccogli
+Use,Use,Usa
+Open,Open,Apri
+Look at,Look at,Esamina
+Push,Push,Spingi
+Close,Close,Chiudi
+Talk to,Talk to,Parla con
+Pull,Pull,Tira
+with,with,con
+to,to,a

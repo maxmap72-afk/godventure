@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ct5p85fbuoh26"
+
+[deps]
+
+files=["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation"]
+
+source_file="res://addons/avventura/i18n/avventura.csv"
+dest_files=["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

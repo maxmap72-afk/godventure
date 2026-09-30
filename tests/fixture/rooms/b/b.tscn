@@ -1,0 +1,57 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_room.gd" id="1_room"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_walk_area.gd" id="2_walk"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_hotspot.gd" id="3_hs"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_entry.gd" id="4_entry"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_character.gd" id="5_char"]
+
+[node name="B" type="Node2D"]
+script = ExtResource("1_room")
+display_name = "Room B"
+background_color = Color(0.2, 0.25, 0.2, 1)
+
+[node name="Floor" type="Polygon2D" parent="."]
+script = ExtResource("2_walk")
+polygon = PackedVector2Array(40, 400, 1240, 400, 1240, 700, 40, 700)
+
+[node name="SignB" type="Area2D" parent="."]
+script = ExtResource("3_hs")
+hotspot_id = "sign_b"
+display_name = "Sign"
+default_verb = "look"
+walk_to = Vector2(500, 520)
+
+[node name="Shape" type="CollisionPolygon2D" parent="SignB"]
+polygon = PackedVector2Array(460, 380, 540, 380, 540, 440, 460, 440)
+
+[node name="Robot" type="Area2D" parent="."]
+position = Vector2(1000, 600)
+script = ExtResource("5_char")
+display_name = "Robot"
+body_color = Color(0.6, 0.6, 0.7, 1)
+
+[node name="ToA" type="Area2D" parent="."]
+script = ExtResource("3_hs")
+hotspot_id = "to_a"
+display_name = "To A"
+exit_to = "a"
+
+[node name="Shape" type="CollisionPolygon2D" parent="ToA"]
+polygon = PackedVector2Array(40, 600, 100, 600, 100, 700, 40, 700)
+
+[node name="WalkTo" type="Marker2D" parent="ToA"]
+position = Vector2(60, 650)
+
+[node name="a" type="Marker2D" parent="."]
+position = Vector2(140, 650)
+script = ExtResource("4_entry")
+face = "right"
+
+[node name="spot" type="Marker2D" parent="."]
+position = Vector2(800, 600)
+script = ExtResource("4_entry")
+
+[node name="default" type="Marker2D" parent="."]
+position = Vector2(640, 600)
+script = ExtResource("4_entry")

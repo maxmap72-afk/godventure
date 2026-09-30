@@ -1,0 +1,137 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_room.gd" id="1_room"]
+[ext_resource type="Texture2D" path="res://game/rooms/molo/molo.svg" id="2_bg"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_walk_area.gd" id="3_walk"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_hotspot.gd" id="4_hotspot"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_entry.gd" id="5_entry"]
+[ext_resource type="Texture2D" path="res://game/rooms/molo/barile.svg" id="6_barrel"]
+[ext_resource type="Texture2D" path="res://game/rooms/molo/barile_aperto.svg" id="7_barrel_open"]
+[ext_resource type="Texture2D" path="res://game/rooms/molo/fiammiferi.svg" id="8_matches"]
+
+[node name="Molo" type="Node2D"]
+script = ExtResource("1_room")
+display_name = "Molo"
+far_y = 480.0
+far_scale = 0.85
+near_y = 712.0
+near_scale = 1.05
+
+[node name="Background" type="Sprite2D" parent="."]
+z_index = -100
+texture = ExtResource("2_bg")
+centered = false
+
+[node name="WalkArea" type="Polygon2D" parent="."]
+script = ExtResource("3_walk")
+color = Color(0.2, 0.9, 0.4, 0.25)
+polygon = PackedVector2Array(0, 484, 1048, 484, 1128, 706, 0, 712)
+
+[node name="Corda" type="Polygon2D" parent="WalkArea"]
+color = Color(0.95, 0.25, 0.2, 0.3)
+polygon = PackedVector2Array(660, 650, 700, 640, 742, 650, 742, 672, 700, 682, 660, 672)
+
+[node name="Mare" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Mare"
+default_verb = "look"
+walk_before = false
+
+[node name="Shape" type="CollisionPolygon2D" parent="Mare"]
+polygon = PackedVector2Array(0, 300, 1280, 300, 1280, 720, 1150, 720, 1060, 470, 0, 470)
+
+[node name="Barca" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Barca"
+default_verb = "look"
+walk_to = Vector2(1070, 640)
+face = "right"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Barca"]
+polygon = PackedVector2Array(1018, 604, 1264, 600, 1250, 676, 1180, 692, 1080, 694, 1034, 670)
+
+[node name="Gabbiano" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Gabbiano"
+default_verb = "look"
+walk_before = false
+
+[node name="Shape" type="CollisionPolygon2D" parent="Gabbiano"]
+polygon = PackedVector2Array(940, 200, 992, 200, 992, 232, 940, 232)
+
+[node name="Casse" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Casse"
+description = "Casse di pesce vuote. Vuotissime. Da tre notti."
+default_verb = "look"
+walk_to = Vector2(560, 510)
+face = "up"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Casse"]
+polygon = PackedVector2Array(518, 418, 582, 418, 582, 438, 626, 438, 626, 486, 518, 486)
+
+[node name="Corda" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+display_name = "Corda"
+default_verb = "look"
+walk_to = Vector2(700, 628)
+
+[node name="Shape" type="CollisionPolygon2D" parent="Corda"]
+polygon = PackedVector2Array(664, 648, 700, 644, 738, 648, 738, 674, 700, 678, 664, 674)
+
+[node name="Barile" type="Area2D" parent="."]
+position = Vector2(300, 566)
+script = ExtResource("4_hotspot")
+display_name = "Barile"
+default_verb = "open"
+walk_to = Vector2(78, 10)
+face = "left"
+
+[node name="state_chiuso" type="Sprite2D" parent="Barile"]
+texture = ExtResource("6_barrel")
+offset = Vector2(0, -48)
+
+[node name="state_aperto" type="Sprite2D" parent="Barile"]
+visible = false
+texture = ExtResource("7_barrel_open")
+offset = Vector2(0, -48)
+
+[node name="Fiammiferi" type="Area2D" parent="."]
+visible = false
+position = Vector2(372, 592)
+script = ExtResource("4_hotspot")
+display_name = "Fiammiferi"
+description = "Una scatola di fiammiferi, un po' umida."
+walk_to = Vector2(40, 8)
+face = "left"
+pickup_item = "fiammiferi"
+
+[node name="Sprite" type="Sprite2D" parent="Fiammiferi"]
+texture = ExtResource("8_matches")
+offset = Vector2(0, -12)
+
+[node name="VersoSpiaggia" type="Area2D" parent="."]
+script = ExtResource("4_hotspot")
+hotspot_id = "verso_spiaggia"
+display_name = "Verso la spiaggia"
+exit_to = "spiaggia"
+
+[node name="Shape" type="CollisionPolygon2D" parent="VersoSpiaggia"]
+polygon = PackedVector2Array(0, 484, 80, 484, 80, 712, 0, 712)
+
+[node name="WalkTo" type="Marker2D" parent="VersoSpiaggia"]
+position = Vector2(30, 600)
+
+[node name="spiaggia" type="Marker2D" parent="."]
+position = Vector2(100, 600)
+script = ExtResource("5_entry")
+face = "right"
+
+[node name="posto_beppe" type="Marker2D" parent="."]
+position = Vector2(880, 596)
+script = ExtResource("5_entry")
+face = "left"
+
+[node name="default" type="Marker2D" parent="."]
+position = Vector2(500, 600)
+script = ExtResource("5_entry")

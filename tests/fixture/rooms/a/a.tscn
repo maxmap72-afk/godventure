@@ -1,0 +1,76 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_room.gd" id="1_room"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_walk_area.gd" id="2_walk"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_hotspot.gd" id="3_hs"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_entry.gd" id="4_entry"]
+
+[node name="A" type="Node2D"]
+script = ExtResource("1_room")
+display_name = "Room A"
+
+[node name="Floor" type="Polygon2D" parent="."]
+script = ExtResource("2_walk")
+polygon = PackedVector2Array(40, 400, 1240, 400, 1240, 700, 40, 700)
+
+[node name="Wall" type="Polygon2D" parent="Floor"]
+polygon = PackedVector2Array(600, 380, 680, 380, 680, 620, 600, 620)
+
+[node name="Island" type="Polygon2D" parent="."]
+script = ExtResource("2_walk")
+polygon = PackedVector2Array(1000, 100, 1200, 100, 1200, 300, 1000, 300)
+
+[node name="Bridge" type="Polygon2D" parent="."]
+script = ExtResource("2_walk")
+enabled = false
+polygon = PackedVector2Array(1080, 290, 1120, 290, 1120, 410, 1080, 410)
+
+[node name="Box" type="Area2D" parent="."]
+script = ExtResource("3_hs")
+display_name = "Box"
+walk_to = Vector2(300, 520)
+
+[node name="Shape" type="CollisionPolygon2D" parent="Box"]
+polygon = PackedVector2Array(260, 420, 340, 420, 340, 480, 260, 480)
+
+[node name="state_open" type="Polygon2D" parent="Box"]
+visible = false
+polygon = PackedVector2Array(260, 420, 340, 420, 340, 440, 260, 440)
+
+[node name="Lever" type="Area2D" parent="."]
+script = ExtResource("3_hs")
+display_name = "Lever"
+walk_to = Vector2(900, 560)
+
+[node name="Shape" type="CollisionPolygon2D" parent="Lever"]
+polygon = PackedVector2Array(880, 480, 920, 480, 920, 540, 880, 540)
+
+[node name="Gem" type="Area2D" parent="."]
+script = ExtResource("3_hs")
+display_name = "Gem"
+walk_to = Vector2(1100, 200)
+pickup_item = "gem"
+
+[node name="Shape" type="CollisionPolygon2D" parent="Gem"]
+polygon = PackedVector2Array(1080, 150, 1120, 150, 1120, 190, 1080, 190)
+
+[node name="ToB" type="Area2D" parent="."]
+script = ExtResource("3_hs")
+hotspot_id = "to_b"
+display_name = "To B"
+exit_to = "b"
+
+[node name="Shape" type="CollisionPolygon2D" parent="ToB"]
+polygon = PackedVector2Array(1180, 600, 1240, 600, 1240, 700, 1180, 700)
+
+[node name="WalkTo" type="Marker2D" parent="ToB"]
+position = Vector2(1220, 650)
+
+[node name="default" type="Marker2D" parent="."]
+position = Vector2(200, 600)
+script = ExtResource("4_entry")
+
+[node name="b" type="Marker2D" parent="."]
+position = Vector2(1150, 650)
+script = ExtResource("4_entry")
+face = "left"

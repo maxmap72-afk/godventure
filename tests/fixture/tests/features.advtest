@@ -1,0 +1,134 @@
+# Engine features, from a new game in room a.
+expect room() == "a"
+expect started
+expect a_entered == 1
+expect player() == "max"
+
+# cycle / sequence / once / times
+look box
+expect said("box one")
+look box
+expect said("box two")
+look box
+expect said("box one")
+talk box
+expect said("seq one")
+talk box
+expect said("seq two")
+talk box
+expect said("seq two")
+pick box
+expect said("first pick")
+expect said("pick again 0")
+pick box
+expect not said("first pick")
+expect said("pick again 1")
+
+# functions with parameters, stop, variables
+use box
+expect counter == 5
+expect log == "aa"
+expect said("counter 5")
+
+# while loop, bg script, GDScript function in expressions and call
+push box
+expect i == 5
+expect bg_done
+expect said("loop 5 10")
+pull box
+expect helper_result == 6
+
+# object state
+open box
+expect state(box) == "open"
+open box
+expect said("already open")
+
+# cutscene with a function call inside
+close box
+expect said("Hello you!")
+expect said("cut two")
+
+# wildcard precedence: room "on look *" beats global "on look *"
+look lever
+expect said("room look")
+do kick lever
+expect said("global fallback")
+
+# walk areas: the island is unreachable until the bridge is enabled
+walk gem
+expect said("unreachable")
+expect not near(player, gem)
+use lever
+expect enabled(bridge)
+walk gem
+expect near(player, gem)
+pick gem
+expect has(gem)
+expect not shown(gem)
+item add coin
+use coin on gem
+expect said("Combined")
+look coin
+expect said("shiny coin")
+
+# rooms, engine-managed characters
+walk to_b
+expect room() == "b"
+expect visits(a) == 1
+expect room_of(sam) == "b"
+expect near(max, a)
+
+# dialogs: once, nested with back and end, hidden options, conditions
+talk to sam
+expect said("Hi.")
+expect said("Conditional")
+choose "Once only"
+choose "Deeper"
+choose "Sub back"
+expect said("Back at top")
+choose "Deeper"
+choose "Sub end"
+expect said("Ending all")
+talk to sam
+expect not said("Once only")
+choose "Bye"
+run option on sam_d.secret
+talk to sam
+choose "Secret"
+expect used(sam_d.secret) == 1
+choose "Bye"
+
+# objects can talk, inventories of other characters, remote rooms
+talk robot
+expect said("robot: Beep.")
+push sign_b
+expect has(note, sam)
+expect not has(note)
+pull sign_b
+expect not shown(box, a)
+expect state(box, a) == "broken"
+use sign_b
+expect room_of(sam) == "a"
+
+# control another character
+run control robot
+expect player() == "robot"
+run control max
+expect player() == "max"
+
+# save and load
+save fixture_t1
+set counter = 99
+load fixture_t1
+expect counter == 5
+expect room() == "b"
+expect has(gem)
+
+# back to a: sam is there now, the box is hidden
+walk to_a
+expect room() == "a"
+expect a_entered == 2
+expect room_of(sam) == "a"
+expect near(sam, default)
+expect not shown(box)

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Godot ${{ matrix.godot }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        godot: ["4.4.1", "4.7.2"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot ${{ matrix.godot }}
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${{ matrix.godot }}-stable/Godot_v${{ matrix.godot }}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          echo "GODOT=$RUNNER_TEMP/Godot_v${{ matrix.godot }}-stable_linux.x86_64" >> "$GITHUB_ENV"
+
+      - name: Import project
+        run: timeout 600 "$GODOT" --headless --path . --import || true
+
+      - name: Unit tests (language, pathfinding)
+        run: timeout 300 "$GODOT" --headless --path . --script res://tests/unit/run_unit_tests.gd
+
+      - name: Engine fixture
+        run: timeout 300 "$GODOT" --headless --path . -- --adv-game-dir=res://tests/fixture --adv-test
+
+      - name: Lint demo game
+        run: python3 tools/adv.py lint
+
+      - name: Demo walkthrough
+        run: python3 tools/adv.py test
+
+      - name: CLI play session
+        run: |
+          python3 tools/adv.py play "look cartello; pick pala" --new | tee out.txt
+          grep -q "\[+\] pala" out.txt

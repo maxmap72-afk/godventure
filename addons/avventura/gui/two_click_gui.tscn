@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/avventura/gui/two_click_gui.gd" id="1_gui"]
+
+[node name="TwoClickGui" type="CanvasLayer"]
+script = ExtResource("1_gui")

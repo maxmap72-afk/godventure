@@ -1,0 +1,29 @@
+# ================================================================
+#  Oggetti dell'inventario
+# ================================================================
+# L'icona è game/items/<id>.svg (o .png). Senza icona il motore
+# disegna un segnaposto colorato con l'iniziale del nome.
+
+item pala "Pala"
+item vermi "Vermi"
+item chiave "Chiave del faro"
+item fiammiferi "Fiammiferi"
+
+
+on look pala:
+    nina: Una vecchia pala arrugginita. Perfetta per scavare.
+
+on look vermi:
+    nina: Un pugno di vermi. Deliziosi... se sei un pesce.
+
+on look chiave:
+    nina: Una grossa chiave di ferro. Deve essere quella del faro.
+
+on look fiammiferi:
+    nina: Una scatola di fiammiferi. Speriamo che non siano bagnati.
+
+on use pala:
+    nina: Devo decidere dove scavare.
+
+on use vermi on pala:
+    nina: No, grazie. La pala non ha fame.

@@ -1,0 +1,43 @@
+# ================================================================
+#  Il Segreto del Faro - gioco dimostrativo di Avventura
+# ================================================================
+# Questo file contiene la configurazione del gioco e le risposte
+# generiche usate quando un'azione non ha uno script dedicato.
+
+title "Il Segreto del Faro"
+player nina
+start spiaggia at default
+
+# Variabili del gioco (valore iniziale di una nuova partita)
+var faro_aperto = false
+var beppe_vuole_vermi = false
+
+
+on start:
+    cutscene:
+        narrator: Isola di Punta Gallina, al tramonto.
+        narrator: Da tre notti il vecchio faro è spento, e i pescatori non osano uscire in mare.
+        nina: Qualcuno dovrà pur riaccenderlo. Tanto vale che sia io!
+
+
+# ---------------------------------------------------------------
+# Risposte generiche. "*" vuol dire "qualunque cosa".
+# Gli script specifici (es. "on look cartello") hanno la precedenza.
+# ---------------------------------------------------------------
+
+on look *:
+    random:
+        nina: Niente di speciale.
+        nina: Non noto nulla di interessante.
+
+on talk *:
+    nina: Non credo che mi risponderebbe.
+
+on pick *:
+    nina: Non posso prenderlo.
+
+on * *:
+    random:
+        nina: Non funziona.
+        nina: Mmm... no.
+        nina: Non mi sembra una buona idea.

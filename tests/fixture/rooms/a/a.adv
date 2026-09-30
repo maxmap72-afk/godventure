@@ -1,0 +1,59 @@
+on enter:
+    set a_entered = visits(a)
+
+on look box:
+    cycle:
+        max: box one
+        max: box two
+
+on talk box:
+    sequence:
+        max: seq one
+        max: seq two
+
+on pick box:
+    once:
+        max: first pick
+    max: pick again {times}
+
+on use box:
+    call add(2)
+    call add(3)
+    max: counter {counter}
+
+on push box:
+    bg:
+        set bg_done = true
+    set i = 0
+    while i < 5:
+        set i += 1
+    max: loop {i} {double(i)}
+
+on pull box:
+    call game_helper(3)
+    max: helper {helper_result}
+
+on open box:
+    if state(box) == "open":
+        max: already open
+    else:
+        state box open
+        max: opened
+
+on close box:
+    cutscene:
+        max: cut one
+        wait 2
+        call greet("you")
+        max: cut two
+
+on use lever:
+    if enabled(bridge):
+        disable bridge
+        max: bridge off
+    else:
+        enable bridge
+        max: bridge on
+
+on look *:
+    max: room look

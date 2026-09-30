@@ -1,0 +1,18 @@
+on look sign_b:
+    max: sign b
+
+on use sign_b:
+    place sam in a at default
+    max: sam moved
+
+on push sign_b:
+    inventory add note to sam
+    max: gave note to sam
+
+on pull sign_b:
+    hide box in a
+    state box broken in a
+    max: box hidden remotely
+
+on talk robot:
+    robot: Beep.
