@@ -8,7 +8,7 @@ const BLOCK_WORDS := ["on", "dialog", "function", "option", "if", "elif", "else"
 const DECL_WORDS := ["var", "item", "character", "title", "player", "start"]
 const STMT_WORDS := ["set", "walk", "face", "anim", "wait", "inventory", "pickup", "show", "hide",
 	"enable", "disable", "state", "goto", "place", "control", "end", "back", "stop", "call",
-	"sound", "music", "camera", "fade", "print", "end_game", "expect", "choose", "skip", "scene"]
+	"sound", "music", "video", "camera", "fade", "print", "end_game", "expect", "choose", "skip", "scene"]
 const OPERATOR_WORDS := ["and", "or", "not", "in", "true", "false", "null", "to", "at", "with",
 	"as", "from", "add", "remove", "nowait", "loop", "once", "hidden", "silent", "follow", "out"]
 

@@ -11,7 +11,7 @@ extends RefCounted
 const STATEMENTS := ["if", "elif", "else", "while", "set", "walk", "face", "anim", "wait",
 	"inventory", "pickup", "show", "hide", "enable", "disable", "state", "goto", "place",
 	"control", "dialog", "end", "back", "stop", "option", "call", "cutscene", "bg", "random",
-	"cycle", "sequence", "once", "do", "sound", "music", "camera", "fade", "print", "end_game",
+	"cycle", "sequence", "once", "do", "sound", "music", "camera", "fade", "print", "end_game", "video",
 	"on", "function", "var", "item", "character"]
 
 ## Statements that take an indented block after a colon.
@@ -393,11 +393,24 @@ func _parse_stmt(node: Dictionary) -> Variant:
 			return _p_set(st, rest)
 		"walk":
 			st.nowait = _pop_flag(w, "nowait")
+			st.anywhere = _pop_flag(w, "anywhere")
+			if not st.nowait:
+				st.nowait = _pop_flag(w, "nowait")
 			var to := w.find("to")
-			if to != 0 and to != 1:
-				return _bad(line, "write 'walk to TARGET' or 'walk CHARACTER to TARGET'")
-			st.who = "player" if to == 0 else w[0]
-			st.loc = _loc(" ".join(w.slice(to + 1)), line)
+			var by := w.find("by")
+			if (to == 0 or to == 1) and by == -1:
+				st.who = "player" if to == 0 else w[0]
+				st.loc = _loc(" ".join(w.slice(to + 1)), line)
+			elif (by == 0 or by == 1) and to == -1:
+				# relative move: walk ray by 100, -20
+				st.who = "player" if by == 0 else w[0]
+				st.loc = _loc(" ".join(w.slice(by + 1)), line)
+				if st.loc != null and not st.loc.has("pos"):
+					return _bad(line, "write 'walk CHARACTER by DX, DY'")
+				if st.loc != null:
+					st.loc = {"by": st.loc.pos}
+			else:
+				return _bad(line, "write 'walk to TARGET', 'walk CHARACTER to TARGET' or 'walk CHARACTER by DX, DY' (optionally nowait / anywhere)")
 			return st if st.loc != null else null
 		"face":
 			if w.size() == 1:
@@ -471,11 +484,16 @@ func _parse_stmt(node: Dictionary) -> Variant:
 			if w.size() == 1:
 				st.room = w[0]
 				st.at = ""
-			elif w.size() == 3 and w[1] == "at":
+			elif w.size() >= 3 and w[1] == "at":
 				st.room = w[0]
-				st.at = w[2]
+				var loc = _loc(" ".join(w.slice(2)), line)
+				if loc == null:
+					return null
+				st.at = loc.get("id", "")
+				if loc.has("pos"):
+					st.pos = loc.pos
 			else:
-				return _bad(line, "write 'goto ROOM' or 'goto ROOM at ENTRY'")
+				return _bad(line, "write 'goto ROOM', 'goto ROOM at ENTRY' or 'goto ROOM at X, Y'")
 			return st
 		"place":
 			if w.size() >= 3 and w[1] == "at":
@@ -488,13 +506,13 @@ func _parse_stmt(node: Dictionary) -> Variant:
 				st.room = w[2]
 				st.loc = null
 				return st
-			if w.size() == 5 and w[1] == "in" and w[3] == "at":
+			if w.size() >= 5 and w[1] == "in" and w[3] == "at":
 				st.who = w[0]
 				st.room = w[2]
-				st.loc = {"id": w[4]}
-				return st
+				st.loc = _loc(" ".join(w.slice(4)), line)
+				return st if st.loc != null else null
 			return _bad(line, "write 'place CHARACTER at TARGET' or 'place CHARACTER in ROOM [at ENTRY]'")
-		"control", "dialog", "sound":
+		"control", "dialog", "sound", "video":
 			if w.size() != 1:
 				return _bad(line, "write '%s NAME'" % word)
 			st.name = w[0]

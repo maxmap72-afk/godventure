@@ -281,7 +281,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _in_menu:
 		return
-	if Adv.is_speaking() and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+	if (Adv.is_speaking() or Adv.is_playing_video()) and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
 		Adv.skip_line()
 		get_viewport().set_input_as_handled()
 		return
@@ -326,7 +326,9 @@ func _on_escape() -> void:
 		if not title_mode:
 			_close_all_menus()
 		return
-	if Adv.in_cutscene():
+	if Adv.is_playing_video():
+		Adv.skip_line()
+	elif Adv.in_cutscene():
 		Adv.skip_cutscene()
 	elif Adv.selected_item != "":
 		Adv.select_item("")

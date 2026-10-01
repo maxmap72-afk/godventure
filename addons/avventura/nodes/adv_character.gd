@@ -111,12 +111,13 @@ func set_room_position(p: Vector2) -> void:
 
 ## Walks to [param target] (room coordinates). Returns true when it gets there,
 ## false when it can't reach it or it's interrupted by another walk.
-func move_to(target: Vector2) -> bool:
+## With [param anywhere] the walk areas are ignored (AGS eAnywhere).
+func move_to(target: Vector2, anywhere: bool = false) -> bool:
 	if is_walking:
 		_finish(false)
 	var room := _room()
 	var from := room_position()
-	var path := room.find_path(from, target) if room else PackedVector2Array([from, target])
+	var path := room.find_path(from, target) if room and not anywhere else PackedVector2Array([from, target])
 	if path.is_empty():
 		return false
 	if path.size() < 2 or from.distance_to(path[path.size() - 1]) < 1.0:

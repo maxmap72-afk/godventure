@@ -57,3 +57,10 @@ on use lever:
 
 on look *:
     max: room look
+
+on walk_onto trap:
+    set trapped += 1
+    max: trapped
+
+on walk_off trap:
+    set escaped = true

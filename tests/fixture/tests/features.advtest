@@ -55,6 +55,16 @@ expect said("room look")
 do kick lever
 expect said("global fallback")
 
+# regions (AGS WalksOnto / WalksOff), relative walks
+walk 350 650
+wait 0.1
+expect trapped == 1
+walk 200 650
+wait 0.1
+expect escaped
+run walk max by 0, -50
+expect near(max, default, 60)
+
 # walk areas: the island is unreachable until the bridge is enabled
 walk gem
 expect said("unreachable")

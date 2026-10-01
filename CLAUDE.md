@@ -41,6 +41,7 @@ game/audio/<name>.ogg      used by `sound NAME` / `music NAME`
 game/game.gd               optional GDScript whose functions AdvScript can `call`
 addons/avventura/          the engine (core/, nodes/, gui/, editor/)
 tools/adv.py, tools/adv_mcp.py   CLI and MCP server
+tools/ags/                 AGS 3.x importer: crm.py (room files), masks.py, ags_script.py (script translator), ags_import.py
 ```
 
 - Ids are snake_case. A hotspot's id is its `hotspot_id` or its node name in snake_case.
@@ -76,8 +77,10 @@ on look cartello:                    # handler: on VERB TARGET / on VERB ITEM on
         narrator: ...
     else:
         walk to porta                # walk [CHAR] to TARGET|X,Y [nowait]; face; anim NAME
-walk / face / anim / wait 1.5 / pickup obj [as item] / inventory add|remove item [to|from char]
-show|hide|enable|disable obj [in room] / state obj value [in room] / goto room [at entry]
+walk [char] to T|X,Y / walk [char] by DX,DY [nowait] [anywhere] / face / anim / wait 1.5
+pickup obj [as item] / inventory add|remove item [to|from char] / video name (game/video/name.ogv)
+show|hide|enable|disable obj [in room] / state obj value [in room] / goto room [at entry|X,Y]
+on walk_onto REGION: / on walk_off REGION:   (AdvRegion nodes, like AGS regions)
 place char at target / place char in room [at entry] / control char / camera follow|to|shake
 dialog name / option on|off dialog.opt / end / back / stop / call fn(args) / end_game
 cutscene: / bg: / random: / cycle: / sequence: / once: / do: / while cond:

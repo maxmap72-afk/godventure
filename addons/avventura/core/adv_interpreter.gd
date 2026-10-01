@@ -129,7 +129,14 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 			else:
 				adv.set_var(st.name, v)
 		"walk":
-			await adv.walk(st.who, _loc(st.loc), not st.nowait)
+			var target = _loc(st.loc)
+			if st.loc.has("by"):
+				var ch: AdvCharacter = adv.get_character(st.who)
+				if ch == null:
+					error("walk: '%s' is not in this room" % st.who, ctx)
+					return CONT
+				target = ch.room_position() + st.loc.by
+			await adv.walk(st.who, target, not st.nowait, st.get("anywhere", false))
 		"face":
 			adv.face(st.who, st.to)
 		"anim":
@@ -150,7 +157,7 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 		"state":
 			adv.set_object_state(st.obj, st.value, st.room)
 		"goto":
-			await adv.change_room(st.room, st.at)
+			await adv.change_room(st.room, st.at, st.get("pos"))
 		"place":
 			adv.place(st.who, st.room, _loc(st.loc) if st.loc != null else null)
 		"control":
@@ -199,6 +206,8 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 					return await exec(st.body[mini(count, n - 1)], ctx)
 		"sound":
 			adv.play_sound(st.name)
+		"video":
+			await adv.play_video(st.name)
 		"music":
 			if st.name == "stop":
 				adv.stop_music()

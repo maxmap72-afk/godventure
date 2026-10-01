@@ -23,6 +23,7 @@ gioco, dal primo hotspot fino all'esportazione. Il gioco dimostrativo *Il Segret
 14. [Lavorare con Claude Code](#14-lavorare-con-claude-code)
 15. [Impostazioni del progetto](#15-impostazioni-del-progetto)
 16. [Esportare e tradurre](#16-esportare-e-tradurre)
+17. [Importare un gioco AGS](#17-importare-un-gioco-ags)
 
 ---
 
@@ -123,6 +124,11 @@ Figli tipici:
 - **Hotspot e personaggi** – come figli diretti della stanza vengono ordinati in profondità
   secondo la loro Y (chi è più in basso sta davanti). Per elementi sempre in primo piano
   usa uno `z_index` positivo.
+
+- **Regioni** – nodi `AdvRegion` (poligoni invisibili sul pavimento): quando il protagonista
+  ci entra o ne esce partono `on walk_onto ID:` e `on walk_off ID:` (come i *WalksOnto* di
+  AGS). Si attivano solo quando il gioco non sta eseguendo uno script; `enable`/`disable`
+  le accendono e spengono.
 
 Eventi della stanza, nello script della stanza:
 
@@ -275,7 +281,7 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | Istruzione | Esempio | Note |
 |---|---|---|
 | battuta | `nina: Ciao!` · `beppe(felice): "Evviva!"` | `narrator:` per il narratore; `{espressioni}` nel testo |
-| `walk` | `walk to porta` · `walk beppe to 400, 520` · `walk to barca nowait` | `nowait` non aspetta l'arrivo |
+| `walk` | `walk to porta` · `walk beppe to 400, 520` · `walk to barca nowait` · `walk beppe by 100, -20` | `nowait` non aspetta l'arrivo; `by` sposta rispetto a dove si trova; `anywhere` ignora le aree calpestabili |
 | `face` | `face left` · `face beppe nina` | left/right/up/down o un bersaglio |
 | `anim` | `anim scava` · `anim beppe balla loop` · `anim idle` | `nowait`, `loop`; `idle` ferma |
 | `wait` | `wait 1.5` | secondi |
@@ -287,8 +293,8 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | `show` / `hide` | `show buca` · `hide barca in molo` | hotspot, nodi, in altre stanze |
 | `enable` / `disable` | `disable porta` · `enable ponte` | interattività, aree calpestabili |
 | `state` | `state barile aperto` · `state faro acceso in spiaggia` | stato visivo salvato |
-| `goto` | `goto faro` · `goto molo at pontile` | cambia stanza |
-| `place` | `place beppe at barile` · `place beppe in faro at scala` | sposta un personaggio |
+| `goto` | `goto faro` · `goto molo at pontile` · `goto molo at 240, 350` | cambia stanza (anche in un punto preciso) |
+| `place` | `place beppe at barile` · `place beppe in faro at scala` · `place beppe in faro at 600, 500` | sposta un personaggio |
 | `control` | `control beppe` | cambia protagonista |
 | `dialog` | `dialog beppe` | apre un dialogo |
 | `option` | `option on beppe.vermi` · `option off beppe.faro` | attiva/disattiva opzioni |
@@ -301,6 +307,7 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | `once:` | blocco | solo la prima volta |
 | `do:` | blocco | raggruppa più righe (per esempio come alternativa di `random:`) |
 | `sound` / `music` | `sound porta` · `music tema` · `music stop` | file in `game/audio/` |
+| `video` | `video intro` | filmato a schermo intero da `game/video/intro.ogv`; clic o Esc lo saltano |
 | `camera` | `camera to faro 2` · `camera follow` · `camera shake 0.5` | |
 | `fade` | `fade out 1` · `fade in` | dissolvenza al nero |
 | `print` | `print monete={monete}` | messaggio di debug |
@@ -614,3 +621,25 @@ escluderle nei filtri dell'esportazione.
 Godot (CSV o PO) puoi tradurre battute, nomi e opzioni usando il testo originale come
 chiave. Le scritte dell'interfaccia sono già in inglese e italiano
 (`addons/avventura/i18n/avventura.csv`); aggiungi una colonna per altre lingue.
+
+## 17. Importare un gioco AGS
+
+`tools/ags/` converte giochi fatti con Adventure Game Studio 3.x (formati stanza 3.0–3.6):
+
+```sh
+# una stanza: sfondo, aree calpestabili (con i buchi), hotspot, regioni, walk-behind, script
+python3 tools/ags/ags_import.py room PERCORSO/room1.crm --asc PERCORSO/room1.asc --player cRay
+# lo script globale (gestori di personaggi e oggetti, funzioni)
+python3 tools/ags/ags_import.py script PERCORSO/GlobalScript.asc --player cRay
+```
+
+`--player` è il nome script del protagonista AGS. Le maschere diventano poligoni, le
+walk-behind diventano sprite ritagliati dallo sfondo e ordinati alla loro *baseline*, i
+bordi della stanza con un evento diventano regioni `edge_left`, `edge_right`... Il codice
+viene tradotto in AdvScript: `Say`, `Walk` (anche relativo e `eAnywhere`), inventario,
+`ChangeRoom`, dialoghi, cutscene, `Wait`, `LockView`, `PlayVideo`, il modulo *Verbs* a 9
+verbi (`AnyClick`, `UsedAction`, `MovePlayer`), `ActiveInventory`, `Game.DoOnceOnly`... Ciò
+che non sa tradurre resta nel file come `# TODO AGS:` con il codice originale; lo script
+originale viene copiato in `rooms/<id>/ags/`. Il controllo (lint) elenca poi i riferimenti
+ancora da sistemare. In arrivo: personaggi, oggetti, dialoghi e variabili da `Game.agf`,
+sprite e animazioni.

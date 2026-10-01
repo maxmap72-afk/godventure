@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://addons/avventura/nodes/adv_room.gd" id="1_room"]
 [ext_resource type="Script" path="res://addons/avventura/nodes/adv_walk_area.gd" id="2_walk"]
 [ext_resource type="Script" path="res://addons/avventura/nodes/adv_hotspot.gd" id="3_hs"]
 [ext_resource type="Script" path="res://addons/avventura/nodes/adv_entry.gd" id="4_entry"]
+[ext_resource type="Script" path="res://addons/avventura/nodes/adv_region.gd" id="5_region"]
 
 [node name="A" type="Node2D"]
 script = ExtResource("1_room")
@@ -74,3 +75,7 @@ script = ExtResource("4_entry")
 position = Vector2(1150, 650)
 script = ExtResource("4_entry")
 face = "left"
+
+[node name="Trap" type="Polygon2D" parent="."]
+script = ExtResource("5_region")
+polygon = PackedVector2Array(300, 600, 400, 600, 400, 690, 300, 690)
