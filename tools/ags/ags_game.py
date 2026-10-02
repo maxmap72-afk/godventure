@@ -203,11 +203,13 @@ def overlay_scene(gui, sprites, path):
 
 # --- game ----------------------------------------------------------------------------------------
 
-def _set_viewport(project, w, h):
+def _set_project(project, title, w, h):
+    """Game name and resolution in project.godot."""
     p = os.path.join(project, "project.godot")
     if not os.path.exists(p):
         return False
     s = open(p).read()
+    s = re.sub(r'(?m)^config/name=.*$', lambda m: 'config/name="%s"' % title.replace('"', "'"), s)
     s2 = re.sub(r"window/size/viewport_width=\d+", "window/size/viewport_width=%d" % w, s)
     s2 = re.sub(r"window/size/viewport_height=\d+", "window/size/viewport_height=%d" % h, s2)
     if "viewport_width" not in s2:
@@ -215,7 +217,7 @@ def _set_viewport(project, w, h):
             s2 = s2.replace("[display]", "[display]\n\nwindow/size/viewport_width=%d\nwindow/size/viewport_height=%d" % (w, h), 1)
         else:
             s2 += "\n[display]\n\nwindow/size/viewport_width=%d\nwindow/size/viewport_height=%d\n" % (w, h)
-    if s2 != s:
+    if s2 != open(p).read():
         with open(p, "w") as f:
             f.write(s2)
     return True
@@ -349,8 +351,8 @@ def import_game(args):
     with open(os.path.join(game_dir, "game.adv"), "w") as f:
         f.write("\n".join(lines) + "\n")
 
-    if _set_viewport(project, *g.resolution):
-        print("  project resolution set to %dx%d" % g.resolution)
+    if _set_project(project, g.title, *g.resolution):
+        print("  project.godot: name \"%s\", resolution %dx%d" % ((g.title,) + g.resolution))
     print("scripts: %d statements translated, %d left as TODO" % (tr.translated, tr.todo))
     for note in notes:
         print("NOTE: " + note)
