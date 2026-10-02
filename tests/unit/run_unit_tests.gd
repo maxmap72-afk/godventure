@@ -22,6 +22,7 @@ func _init() -> void:
 	test_expressions()
 	test_parser()
 	test_parser_errors()
+	test_parser_say_at()
 	test_pathfinder()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -113,6 +114,14 @@ function help(n):
 	check(body[2].who == "beppe" and body[2].loc.id == "barrel", "walk character to target")
 	check(p.dialogs.beppe.options[1].body[0].ref == "beppe.lh", "option ref resolved inside dialog")
 	check(p.handlers[1].item == "key" and p.handlers[1].target == "door", "item handler")
+
+
+func test_parser_say_at() -> void:
+	var p := AdvParser.parse("on enter:\n    nina@586, 60: Over here\n    nina(sad): plain\n", "res://t.adv")
+	check(p.errors.is_empty(), "say@ parses: %s" % str(p.errors))
+	var b: Array = p.handlers[0].body
+	check(b[0].k == "say" and b[0].who == "nina" and b[0].at == Vector2(586, 60) and b[0].text == "Over here", "say at a fixed position")
+	check(b[1].at == null and b[1].mood == "sad", "plain say has no position")
 
 
 func test_parser_errors() -> void:

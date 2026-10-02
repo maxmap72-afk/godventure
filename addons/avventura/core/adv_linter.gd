@@ -207,7 +207,7 @@ func _stmt(st: Dictionary, scope: String, path: String, locals: Dictionary, in_d
 			var r: String = st.room if st.room != "" else scope
 			if st.room != "" and not reg.rooms.has(st.room):
 				_add(path, line, "error", "unknown room '%s'%s" % [st.room, _hint(st.room, reg.rooms.keys())])
-			elif r != "":
+			elif r != "" and not (st.k in ["show", "hide"] and reg.overlays.has(st.obj)):
 				_object(st.obj, r, path, line)
 		"goto":
 			if not reg.rooms.has(st.room):

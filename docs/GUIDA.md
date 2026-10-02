@@ -624,22 +624,48 @@ chiave. Le scritte dell'interfaccia sono già in inglese e italiano
 
 ## 17. Importare un gioco AGS
 
-`tools/ags/` converte giochi fatti con Adventure Game Studio 3.x (formati stanza 3.0–3.6):
+`tools/ags/` converte giochi fatti con Adventure Game Studio 3.x (formati 3.0–3.6). Il modo
+più semplice è importare l'intera cartella del progetto AGS in un progetto Godot nuovo
+(con dentro `addons/avventura` e `tools`):
 
 ```sh
-# una stanza: sfondo, aree calpestabili (con i buchi), hotspot, regioni, walk-behind, script
+python3 tools/ags/ags_import.py game PERCORSO/CARTELLA_AGS
+```
+
+Dalla cartella vengono letti:
+
+- `Game.agf`: titolo, risoluzione (impostata anche in `project.godot`), personaggi con
+  colore del testo, stanza e posizione iniziale, oggetti dell'inventario, variabili globali;
+- `acsprset.spr`: gli sprite. Ogni personaggio diventa una scena
+  `game/characters/<id>/<id>.tscn` con le animazioni prese dalle sue *view* (`walk_*` e
+  `idle_*` dalla view normale, `talk_*` da quella del parlato, le altre view usate da
+  `LockView` con il loro nome, es. `climb_down`); le icone vanno in `game/items/`;
+- le GUI che sono solo immagini (es. una schermata a tutto schermo) diventano *overlay* in
+  `game/overlays/<id>.tscn`, da mostrare con `show id` / `hide id`; le GUI con pulsanti
+  (menu, inventario, salvataggi) sono sostituite dall'interfaccia del motore;
+- tutte le `roomN.crm` / `roomN.asc`, lo script globale, i video `.ogv`/`.webm` (in
+  `game/video/`) e l'audio, se i file sono nella cartella (altrimenti l'elenco finale dice
+  quali file copiare in `game/audio/` e con che nome).
+
+Si possono anche importare pezzi singoli:
+
+```sh
+# una stanza: sfondo, aree calpestabili (con i buchi), hotspot, regioni, walk-behind, oggetti, script
 python3 tools/ags/ags_import.py room PERCORSO/room1.crm --asc PERCORSO/room1.asc --player cRay
 # lo script globale (gestori di personaggi e oggetti, funzioni)
 python3 tools/ags/ags_import.py script PERCORSO/GlobalScript.asc --player cRay
+# solo gli sprite, come PNG
+python3 tools/ags/spr.py PERCORSO/acsprset.spr --out cartella/ [--only 26,37]
 ```
 
 `--player` è il nome script del protagonista AGS. Le maschere diventano poligoni, le
 walk-behind diventano sprite ritagliati dallo sfondo e ordinati alla loro *baseline*, i
 bordi della stanza con un evento diventano regioni `edge_left`, `edge_right`... Il codice
-viene tradotto in AdvScript: `Say`, `Walk` (anche relativo e `eAnywhere`), inventario,
-`ChangeRoom`, dialoghi, cutscene, `Wait`, `LockView`, `PlayVideo`, il modulo *Verbs* a 9
-verbi (`AnyClick`, `UsedAction`, `MovePlayer`), `ActiveInventory`, `Game.DoOnceOnly`... Ciò
-che non sa tradurre resta nel file come `# TODO AGS:` con il codice originale; lo script
+viene tradotto in AdvScript: `Say`, `SayAt` (`john@476,172: testo`), `Walk` (anche relativo
+e `eAnywhere`), inventario, `ChangeRoom`, `SetAsPlayer`, dialoghi, cutscene, `Wait`,
+`LockView`, `PlayVideo`, musica e suoni, GUI mostrate/nascoste, il modulo *Verbs* a 9 verbi
+(`AnyClick`, `UsedAction`, `MovePlayer`), `ActiveInventory`, `Game.DoOnceOnly`... Ciò che
+non sa tradurre resta nel file come `# TODO AGS:` con il codice originale; lo script
 originale viene copiato in `rooms/<id>/ags/`. Il controllo (lint) elenca poi i riferimenti
-ancora da sistemare. In arrivo: personaggi, oggetti, dialoghi e variabili da `Game.agf`,
-sprite e animazioni.
+ancora da sistemare. Non ancora importati: il testo dei dialoghi di `Game.agf`, i font e i
+moduli di script aggiuntivi.

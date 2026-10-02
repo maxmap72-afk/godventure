@@ -3,6 +3,7 @@
 
   python3 tools/ags/ags_import.py room PATH/room1.crm [--asc PATH/room1.asc] [--game game] [--player cRay]
   python3 tools/ags/ags_import.py script PATH/GlobalScript.asc [--game game] [--player cRay]
+  python3 tools/ags/ags_import.py game PATH/AGS_PROJECT_FOLDER [--game game] [--project .]
 
 A room becomes game/rooms/roomN/: roomN.tscn (background, walkable areas with holes,
 hotspots, regions, walk-behinds, objects), roomN.adv (translated script) and ags/ (the
@@ -53,7 +54,9 @@ class Scene:
         return "[gd_scene load_steps=%d format=3]\n\n%s\n\n%s\n" % (len(self.ext) + 1, "\n".join(self.ext), "\n\n".join(self.nodes))
 
 
-def import_room(args):
+def import_room(args, sprites=None, tr=None, start=None, quiet=False):
+    """sprites: SpriteExporter for object images; tr: shared Translator; start: (x, y) of the
+    player's starting position (adds a `start` marker)."""
     room = crm.read_crm(args.crm)
     num = re.findall(r"\d+", os.path.basename(args.crm))
     rid = args.id or ("room%s" % num[-1] if num else os.path.splitext(os.path.basename(args.crm))[0])
@@ -179,16 +182,28 @@ def import_room(args):
                                                      ("polygon", vec([(x0, y0), (x1, y0), (x1, y1), (x0, y1)]))])
             edge_regions.append((edge, room.room_events[idx]))
 
-    # objects (graphics come later from the sprite file)
+    # objects: AGS places the sprite with its bottom-left corner at (x, y)
+    missing = []
     for k, o in enumerate(room.objects):
         sname = o.get("script_name") or "oObject%d" % k
         oid = S.obj_id(sname)
         op = [("visible", "true" if o["visible"] else "false"), ("position", "Vector2(%d, %d)" % (o["x"], o["y"])),
               ("script", 'ExtResource("%s")' % s_hot), ("hotspot_id", q(oid)), ("display_name", q(o.get("name") or oid))]
         sc.node(sname, "Area2D", ".", op)
-        sc.node("Shape", "CollisionShape2D", sname, [])
+        tex = sprites.export(o["sprite"]) if sprites else None
+        if tex:
+            path, w, h = tex
+            t = sc.res("Texture2D", path)
+            sc.node("Sprite", "Sprite2D", sname, [("texture", 'ExtResource("%s")' % t), ("centered", "false"),
+                                                ("offset", "Vector2(0, %d)" % -h)])
+            sc.node("Shape", "CollisionPolygon2D", sname, [("polygon", vec([(0, -h), (w, -h), (w, 0), (0, 0)]))])
+        else:
+            missing.append(str(o["sprite"]))
+            sc.node("Shape", "CollisionShape2D", sname, [])
     if room.objects:
-        report.append("objects: %d (sprite %s not imported yet)" % (len(room.objects), ", ".join(str(o["sprite"]) for o in room.objects)))
+        report.append("objects: %d" % len(room.objects) + (" (sprites not found: %s)" % ", ".join(missing) if missing else ""))
+    if start:
+        sc.node("start", "Marker2D", ".", [("position", "Vector2(%d, %d)" % start), ("script", 'ExtResource("%s")' % s_entry)])
 
     # entry point: centre of the largest walkable area
     best = None
@@ -208,7 +223,8 @@ def import_room(args):
     # script
     adv_lines = ["# Room %s imported from AGS (%s)" % (rid, os.path.basename(args.crm)),
                  "# Untranslated code is kept as '# TODO AGS:' comments.", ""]
-    tr = S.Translator(args.player)
+    tr = tr or S.Translator(args.player)
+    t0, d0 = tr.translated, tr.todo
     if args.asc:
         src = open(args.asc, encoding="utf-8", errors="replace").read()
         with open(os.path.join(out_dir, "ags", os.path.basename(args.asc)), "w") as f:
@@ -244,13 +260,15 @@ def import_room(args):
             adv_lines += S.translate_function(name, funcs[name], tr)
         for g in prog["globals"]:
             adv_lines.append("# TODO AGS (global): " + " ".join(g.split()))
-        report.append("script: %d statements translated, %d left as TODO" % (tr.translated, tr.todo))
+        report.append("script: %d statements translated, %d left as TODO" % (tr.translated - t0, tr.todo - d0))
     with open(os.path.join(out_dir, rid + ".adv"), "w") as f:
         f.write("\n".join(adv_lines).rstrip() + "\n")
     print("imported %s -> %s" % (args.crm, out_dir))
     for r in report:
         print("  " + r)
-    _print_uses(tr)
+    if not quiet:
+        _print_uses(tr)
+    return rid
 
 
 def _key(d, value):
@@ -271,16 +289,18 @@ def _print_uses(tr):
         print("  sounds: " + ", ".join(sorted(tr.used_sounds)))
 
 
-def import_script(args):
+def import_script(args, tr=None, quiet=False):
     src = open(args.asc, encoding="utf-8", errors="replace").read()
     prog = S.Parser(src).program()
-    tr = S.Translator(args.player)
+    tr = tr or S.Translator(args.player)
+    t0, d0 = tr.translated, tr.todo
     lines = ["# Imported from AGS %s" % os.path.basename(args.asc),
              "# Untranslated code is kept as '# TODO AGS:' comments.", ""]
     skip = {"game_start", "repeatedly_execute", "repeatedly_execute_always", "on_key_press", "on_mouse_click",
             "on_event", "dialog_request", "ShowOptions"}
     funcs = {k: v for k, v in prog["functions"].items() if k not in skip and not re.search(r"_On(Click|SliderChange)$|_Click$", k)}
     gui = [k for k in prog["functions"] if re.search(r"_On(Click|SliderChange)$|_Click$", k)]
+    tr.excluded |= skip | set(gui)
     handlers, other = S.translate_handlers(funcs, tr)
     lines += handlers
     for name in other:
@@ -291,8 +311,9 @@ def import_script(args):
     with open(out, "w") as f:
         f.write("\n".join(lines).rstrip() + "\n")
     print("translated %s -> %s" % (args.asc, out))
-    print("  %d statements translated, %d left as TODO" % (tr.translated, tr.todo))
-    _print_uses(tr)
+    print("  %d statements translated, %d left as TODO" % (tr.translated - t0, tr.todo - d0))
+    if not quiet:
+        _print_uses(tr)
 
 
 def main():
@@ -306,14 +327,19 @@ def main():
     s = sub.add_parser("script")
     s.add_argument("asc")
     s.add_argument("--out")
-    for p in (r, s):
+    g = sub.add_parser("game", help="import a whole AGS project folder (Game.agf, acsprset.spr, rooms, scripts)")
+    g.add_argument("ags_dir")
+    for p in (r, s, g):
         p.add_argument("--game", default="game")
         p.add_argument("--project", default=".")
         p.add_argument("--player", default="player", help="AGS script name of the main character, e.g. cRay")
     a = ap.parse_args()
     a.game = os.path.abspath(a.game)
     a.project = os.path.abspath(a.project)
-    if a.cmd == "room":
+    if a.cmd == "game":
+        import ags_game
+        ags_game.import_game(a)
+    elif a.cmd == "room":
         import_room(a)
     else:
         import_script(a)

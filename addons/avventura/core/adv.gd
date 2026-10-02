@@ -86,6 +86,10 @@ var save_dir := "user://saves"
 var prefs := {"text_speed": 1.0, "auto_advance": true, "music_volume": 0.8, "sfx_volume": 1.0, "fullscreen": false}
 
 var _main: Node
+const OVERLAYS := "_overlays"
+var _overlay_layer: CanvasLayer
+## Fixed screen positions of the lines being spoken (say with @X,Y).
+var speech_pos: Dictionary = {}
 var _fade_rect: ColorRect
 var _follow: Node2D
 var _approaching := false
@@ -216,6 +220,10 @@ func _build_world() -> void:
 	camera.position_smoothing_speed = 6.0
 	world.add_child(camera)
 	camera.make_current()
+	_overlay_layer = CanvasLayer.new()
+	_overlay_layer.name = "Overlays"
+	_overlay_layer.layer = 5
+	_main.add_child(_overlay_layer)
 	var layer := CanvasLayer.new()
 	layer.name = "Fade"
 	layer.layer = 100
@@ -443,6 +451,7 @@ func _unload_room() -> void:
 
 ## Applies saved object overrides (visibility, state, enabled) to the room nodes.
 func _apply_room_state() -> void:
+	_apply_overlays()
 	var prefix := state.room + "/"
 	for key in state.objects:
 		if not key.begins_with(prefix):
@@ -807,11 +816,16 @@ func select_item(item: String) -> void:
 # --- commands used by scripts -------------------------------------------------------------
 
 ## Shows a line of dialogue and waits for it (click to skip).
-func say(who: String, text: String, mood: String = "") -> void:
+## [param at]: optional fixed screen position of the text (top-left), like AGS SayAt.
+func say(who: String, text: String, mood: String = "", at: Variant = null) -> void:
 	var id := resolve_char(who)
 	log_line("%s: %s" % [id, text])
 	var ch := get_character(id)
 	speaking[id] = true
+	if at is Vector2:
+		speech_pos[id] = at
+	else:
+		speech_pos.erase(id)
 	speech_started.emit(id, text)
 	if ch:
 		ch.start_talking(mood)
@@ -827,6 +841,7 @@ func say(who: String, text: String, mood: String = "") -> void:
 		ch.stop_talking()
 	speaking.erase(id)
 	speech_finished.emit(id)
+	speech_pos.erase(id)
 
 
 func skip_line() -> void:
@@ -888,8 +903,8 @@ func anim(who: String, anim_name: String, wait_end: bool = true, loop: bool = fa
 		script_error("anim: '%s' is not in room '%s'" % [resolve_char(who), state.room])
 		return
 	if fast or skipping:
-		if loop:
-			ch.play_anim(anim_name, false, true)
+		if loop or anim_name in ["idle", "stop"]:
+			ch.play_anim(anim_name, false, loop)
 		return
 	if wait_end:
 		await ch.play_anim(anim_name, true, loop)
@@ -984,6 +999,9 @@ func set_object_state(obj: String, value: String, room_id: String = "") -> void:
 
 
 func _set_object(obj: String, key: String, value: Variant, room_id: String) -> void:
+	if key == "visible" and room_id == "" and registry.overlays.has(obj) and _object_node(obj) == null:
+		set_overlay_visible(obj, value)
+		return
 	var rid := room_id if room_id != "" else state.room
 	if not registry.rooms.has(rid):
 		script_error("unknown room '%s'" % rid)
@@ -1048,6 +1066,8 @@ func get_object_state(obj: String, room_id: String = "") -> String:
 
 
 func is_object_visible(obj: String, room_id: String = "") -> bool:
+	if room_id == "" and registry.overlays.has(obj) and _object_node(obj) == null:
+		return bool(state.object(OVERLAYS, obj).get("visible", false))
 	var rid := room_id if room_id != "" else state.room
 	var o := state.object(rid, obj)
 	if o.has("visible"):
@@ -1498,6 +1518,30 @@ func list_saves() -> Array:
 	return out
 
 
+# --- overlays ----------------------------------------------------------------------------------
+
+## Shows or hides a full-screen overlay (game/overlays/ID.tscn), drawn above the room and
+## below the interface. Imported AGS GUIs become overlays.
+func set_overlay_visible(id: String, value: bool) -> void:
+	state.set_object(OVERLAYS, id, "visible", value)
+	log_line("[overlay] %s %s" % [id, "show" if value else "hide"])
+	_apply_overlays()
+
+
+func _apply_overlays() -> void:
+	if _overlay_layer == null:
+		return
+	for c in _overlay_layer.get_children():
+		if not bool(state.object(OVERLAYS, str(c.name)).get("visible", false)):
+			_overlay_layer.remove_child(c)
+			c.queue_free()
+	for id in registry.overlays:
+		if bool(state.object(OVERLAYS, id).get("visible", false)) and not _overlay_layer.has_node(NodePath(id)):
+			var inst: Node = load(registry.overlays[id]).instantiate()
+			inst.name = id
+			_overlay_layer.add_child(inst)
+
+
 # --- internals ---------------------------------------------------------------------------------
 
 func _reset_runtime() -> void:
@@ -1509,6 +1553,7 @@ func _reset_runtime() -> void:
 	skipping = false
 	mode = Mode.IDLE
 	speaking.clear()
+	speech_pos.clear()
 	selected_item = ""
 	pending_choices = []
 	_in_transition = false

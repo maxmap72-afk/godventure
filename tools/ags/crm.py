@@ -70,6 +70,9 @@ class Reader:
     def i32(self):
         return struct.unpack("<i", self.s.read(4))[0]
 
+    def u32(self):
+        return struct.unpack("<I", self.s.read(4))[0]
+
     def i64(self):
         return struct.unpack("<q", self.s.read(8))[0]
 

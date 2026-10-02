@@ -385,7 +385,7 @@ func _on_speech_started(char_id: String, text: String) -> void:
 	_on_speech_finished(char_id)
 	var node: Control
 	var anchor = Adv.speech_anchor(char_id)
-	if char_id == "narrator" or anchor == null:
+	if char_id == "narrator" or (anchor == null and not Adv.speech_pos.has(char_id)):
 		var panel := PanelContainer.new()
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var l := _outlined_label(speech_font_size, Adv.text_color(char_id) if char_id != "narrator" else Color(1, 0.97, 0.9), 4)
@@ -426,7 +426,9 @@ func _place_speech(char_id: String, node: Control) -> void:
 	node.size = s
 	var anchor = Adv.speech_anchor(char_id) if char_id != "narrator" else null
 	var p: Vector2
-	if anchor == null:
+	if Adv.speech_pos.has(char_id):
+		p = Adv.speech_pos[char_id]
+	elif anchor == null:
 		p = Vector2((vs.x - s.x) / 2.0, vs.y * 0.12)
 	else:
 		p = anchor - Vector2(s.x / 2.0, s.y)

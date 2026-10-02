@@ -103,7 +103,7 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 	match st.k:
 		"say":
 			var text := AdvExpr.render_template(st.parts, ctx)
-			await adv.say(st.who, text, st.mood)
+			await adv.say(st.who, text, st.mood, st.get("at"))
 		"if":
 			for b in st.branches:
 				if b.cond == null or AdvExpr.truthy(eval(b.cond, ctx)):
@@ -159,7 +159,12 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 		"goto":
 			await adv.change_room(st.room, st.at, st.get("pos"))
 		"place":
-			adv.place(st.who, st.room, _loc(st.loc) if st.loc != null else null)
+			var loc = _loc(st.loc) if st.loc != null else null
+			if adv.resolve_char(st.who) == adv.state.player and st.room != "" and st.room != adv.state.room:
+				# moving the controlled character to another room is a room change (like AGS)
+				await adv.change_room(st.room, loc if loc is String else "", loc if loc is Vector2 else null)
+			else:
+				adv.place(st.who, st.room, loc)
 		"control":
 			await adv.set_player(st.name)
 		"dialog":

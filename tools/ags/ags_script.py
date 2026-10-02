@@ -361,8 +361,12 @@ class Untranslatable(Exception):
 class Translator:
     """Turns parsed AGS statements into AdvScript lines (4-space indentation)."""
 
-    def __init__(self, player="player"):
+    def __init__(self, player="player", overlays=(), engine_guis=(), music=()):
         self.player = player  # AGS script name of the main character, e.g. cRay
+        self.overlays = set(overlays)        # GUI script names imported as overlays
+        self.engine_guis = set(engine_guis)  # GUI script names replaced by the engine's interface
+        self.music = set(music)              # audio clips of type Music
+        self.excluded = set()                # script functions that are not imported
         self.todo = 0
         self.translated = 0
         self.used_items = set()
@@ -454,6 +458,13 @@ class Translator:
             i += 1
         return out
 
+    @staticmethod
+    def _body(lines, ind):
+        """A block needs at least one real statement: comments alone get a no-op."""
+        if not any(not l.strip().startswith("#") for l in lines):
+            lines = list(lines) + [ind + "wait 0"]
+        return lines
+
     def _is_call(self, s, name):
         e = s["e"]
         return e["k"] == "call" and dotted(e["fn"]) == name
@@ -485,7 +496,7 @@ class Translator:
             except Untranslatable:
                 return self.todo_lines(s["src"], ind)
             body = self.stmt(s["body"], ind + "    ")
-            return [ind + "while %s:" % cond] + (body or [ind + "    wait 0"])
+            return [ind + "while %s:" % cond] + self._body(body, ind + "    ")
         if k == "expr":
             try:
                 lines = self.expr_stmt(s["e"], ind)
@@ -511,7 +522,7 @@ class Translator:
         except Untranslatable:
             return self.todo_lines(s["src"], ind)
         out = [ind + "%s %s:" % (kw, c)]
-        out += self.stmt(s["then"], ind + "    ") or [ind + "    wait 0"]
+        out += self._body(self.stmt(s["then"], ind + "    "), ind + "    ")
         els = s["else"]
         if els is not None:
             if els["k"] == "if":
@@ -521,7 +532,7 @@ class Translator:
                     return out
                 out += [ind + "else:"] + ["    " + l for l in sub]
             else:
-                out += [ind + "else:"] + (self.stmt(els, ind + "    ") or [ind + "    wait 0"])
+                out += [ind + "else:"] + self._body(self.stmt(els, ind + "    "), ind + "    ")
         return out
 
     def expr_stmt(self, e, ind):
@@ -533,6 +544,10 @@ class Translator:
                 obj = target[:-8]
                 if obj.startswith("o") and len(obj) > 1 and obj[1].isupper():
                     return [ind + ("show " if val["v"] == "true" else "hide ") + obj_id(obj)]
+                if obj in self.overlays:
+                    return [ind + ("show " if val["v"] == "true" else "hide ") + gui_id(obj)]
+                if obj in self.engine_guis:
+                    return [ind + "# AGS: %s is replaced by the engine's interface" % obj]
                 raise Untranslatable("gui")
             if target.endswith(".Enabled") and val["k"] == "id":
                 obj = target[:-8]
@@ -566,6 +581,10 @@ class Translator:
             return []
         if name == "PlayVideo" and args:
             return [ind + "video %s" % args[0]["v"].rsplit(".", 1)[0] if args[0]["k"] == "str" else ""]
+        if method == "SayAt" and obj and len(args) == 4 and args[0]["k"] == "num" and args[1]["k"] == "num":
+            who = char_id(obj) if obj != self.player else "player"
+            self.used_chars.add(char_id(obj))
+            return [ind + "%s@%s,%s: %s" % (who, args[0]["v"], args[1]["v"], self.say_text(args[3]))]
         if method in ("Say", "SayBackground", "Think") and obj and args:
             who = char_id(obj) if obj != self.player else "player"
             self.used_chars.add(char_id(obj))
@@ -614,14 +633,23 @@ class Translator:
         if method == "Play" and obj.startswith("a"):
             s = snake(obj[1:] if obj[1:2].isupper() else obj)
             self.used_sounds.add(s)
-            return [ind + "sound %s" % s]
+            return [ind + ("music %s" if obj in self.music else "sound %s") % s]
         if method == "Stop" and obj.startswith("a"):
-            return [ind + "music stop"]
+            if obj in self.music or not self.music:
+                return [ind + "music stop"]
+            return []
+        if obj == "" and name in self.excluded:
+            raise Untranslatable(name)
         if obj == "" and re.match(r"^[a-z]\w*$", name) and all(a["k"] in ("num", "str", "id") for a in args):
             # call of a script function defined in the game
             arg = "(%s)" % ", ".join(self.expr(a) for a in args) if args else ""
             return [ind + "call %s%s" % (snake(name), arg)]
         raise Untranslatable(name)
+
+
+def gui_id(name):
+    """gKrug -> krug"""
+    return snake(name[1:] if name[:1] == "g" and name[1:2].isupper() else name)
 
 
 def _relative(e, base):

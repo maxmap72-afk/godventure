@@ -612,6 +612,15 @@ func _try_say(text: String, line: int) -> Variant:
 	var body := text.substr(colon + 1).strip_edges()
 	if body == "":
 		return null
+	# who@X,Y: text  -> speech shown at a fixed screen position (AGS SayAt)
+	var at = null
+	var a := head.find("@")
+	if a != -1:
+		var xy := head.substr(a + 1).split(",")
+		if xy.size() != 2 or not xy[0].strip_edges().is_valid_float() or not xy[1].strip_edges().is_valid_float():
+			return null
+		at = Vector2(xy[0].strip_edges().to_float(), xy[1].strip_edges().to_float())
+		head = head.left(a).strip_edges()
 	var who := head
 	var mood := ""
 	var p := head.find("(")
@@ -636,7 +645,7 @@ func _try_say(text: String, line: int) -> Variant:
 	if tpl.has("error"):
 		_err(line, tpl.error)
 		tpl = {"parts": [txt]}
-	return {"k": "say", "who": who, "mood": mood, "parts": tpl.parts, "text": txt, "line": line}
+	return {"k": "say", "who": who, "mood": mood, "at": at, "parts": tpl.parts, "text": txt, "line": line}
 
 
 # --- helpers -----------------------------------------------------------------------
