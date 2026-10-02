@@ -117,22 +117,30 @@ def import_room(args, sprites=None, tr=None, start=None, quiet=False):
             continue
         x0, y0, x1, y1 = box
         w, h = x1 - x0, y1 - y0
-        rgba = bytearray(w * h * 4)
-        src = room.background.pixels
-        bw = room.background.width
-        for yy in range(h):
-            for xx in range(w):
-                if room.walkbehind_mask.index((x0 + xx), (y0 + yy)) == k:
-                    si = ((y0 + yy) * scale * bw + (x0 + xx) * scale) * 4
-                    di = (yy * w + xx) * 4
-                    rgba[di:di + 4] = src[si:si + 4]
-        fname = "%s_wb%d.png" % (rid, k)
-        crm.write_png(os.path.join(out_dir, fname), w, h, bytes(rgba), 4)
-        tex = sc.res("Texture2D", res_dir + "/" + fname)
+        m = room.walkbehind_mask
+        full = all(m.pixels[(y0 + yy) * m.width + x0:(y0 + yy) * m.width + x1].count(k) == w for yy in range(h))
         base = room.walkbehind_baselines[k] if room.walkbehind_baselines[k] > 0 else y1 * scale
-        sc.node("WalkBehind%d" % k, "Sprite2D", ".", [("position", "Vector2(%d, %d)" % (x0 * scale, base)),
-                                                    ("texture", 'ExtResource("%s")' % tex), ("centered", "false"),
-                                                    ("offset", "Vector2(0, %d)" % (y0 * scale - base)), ("scale", "Vector2(%d, %d)" % (scale, scale))])
+        wp = [("position", "Vector2(%d, %d)" % (x0 * scale, base))]
+        if full and scale == 1:
+            # the walk-behind fills its rectangle: reuse the background instead of a copy
+            wp += [("texture", 'ExtResource("%s")' % t_bg), ("centered", "false"), ("offset", "Vector2(0, %d)" % (y0 - base)),
+                   ("region_enabled", "true"), ("region_rect", "Rect2(%d, %d, %d, %d)" % (x0, y0, w, h))]
+        else:
+            rgba = bytearray(w * h * 4)
+            src = room.background.pixels
+            bw = room.background.width
+            for yy in range(h):
+                for xx in range(w):
+                    if m.index((x0 + xx), (y0 + yy)) == k:
+                        si = ((y0 + yy) * scale * bw + (x0 + xx) * scale) * 4
+                        di = (yy * w + xx) * 4
+                        rgba[di:di + 4] = src[si:si + 4]
+            fname = "%s_wb%d.png" % (rid, k)
+            crm.write_png(os.path.join(out_dir, fname), w, h, bytes(rgba), 4)
+            tex = sc.res("Texture2D", res_dir + "/" + fname)
+            wp += [("texture", 'ExtResource("%s")' % tex), ("centered", "false"),
+                   ("offset", "Vector2(0, %d)" % (y0 * scale - base)), ("scale", "Vector2(%d, %d)" % (scale, scale))]
+        sc.node("WalkBehind%d" % k, "Sprite2D", ".", wp)
         wb_count += 1
     report.append("walk-behinds: %d" % wb_count)
 
