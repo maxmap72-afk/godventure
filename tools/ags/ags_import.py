@@ -5,6 +5,7 @@
   python3 tools/ags/ags_import.py script PATH/GlobalScript.asc [--game game] [--player cRay]
   python3 tools/ags/ags_import.py game PATH/AGS_PROJECT_FOLDER [--game game] [--project .]
   python3 tools/ags/ags_import.py gui PATH/AGS_PROJECT_FOLDER     (only the icon bar + inventory window)
+  python3 tools/ags/ags_import.py characters PATH/AGS_PROJECT_FOLDER  (only the character graphics)
 
 A room becomes game/rooms/roomN/: roomN.tscn (background, walkable areas with holes,
 hotspots, regions, walk-behinds, objects), roomN.adv (translated script) and ags/ (the
@@ -340,7 +341,9 @@ def main():
     g.add_argument("ags_dir")
     u = sub.add_parser("gui", help="only the interface (icon bar + inventory window) from Game.agf")
     u.add_argument("ags_dir")
-    for p in (r, s, g, u):
+    c = sub.add_parser("characters", help="only the character scenes and their frames from Game.agf + acsprset.spr")
+    c.add_argument("ags_dir")
+    for p in (r, s, g, u, c):
         p.add_argument("--game", default="game")
         p.add_argument("--project", default=".")
         p.add_argument("--player", default="player", help="AGS script name of the main character, e.g. cRay")
@@ -350,6 +353,9 @@ def main():
     if a.cmd == "game":
         import ags_game
         ags_game.import_game(a)
+    elif a.cmd == "characters":
+        import ags_game
+        ags_game.import_characters(a)
     elif a.cmd == "gui":
         import ags_game
         ags_game.import_gui(a)

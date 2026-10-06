@@ -184,6 +184,8 @@ character beppe "Beppe":
     hair = #d9d9d9       # manichino: capelli
     skin = #f5cfa9       # manichino: pelle
     speed = 180          # pixel al secondo
+    scale = 0.65         # dimensione rispetto alla grafica (1 = originale)
+    anim_speed = 1.5     # velocità delle animazioni (1 = normale)
     height = 150         # altezza (manichino, area cliccabile, posizione del fumetto)
     room = molo          # dove si trova a inizio partita
     at = posto_beppe     # in quale punto (marker o hotspot)

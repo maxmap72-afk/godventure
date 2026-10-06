@@ -95,7 +95,7 @@ dialog beppe:
     option faro "Il faro è spento" once|hidden|silent if COND:
         ...
 Top level: title "..", player id, start room [at entry], var x = 0,
-           item id "Name"[:  props], character id "Name"[: color/body/hair/room/at/speed/...]
+           item id "Name"[:  props], character id "Name"[: color/body/hair/room/at/pos/speed/scale/anim_speed/...]
 Expressions: and or not == != < > + - * / in; has(item) visited(room) state(obj) shown(obj)
              room() player() used(dialog.opt) room_of(char) name(id) random(a,b) chance(pct)
 Handler locals: times, first, verb, target, item. Comments: "# " (hash + space).

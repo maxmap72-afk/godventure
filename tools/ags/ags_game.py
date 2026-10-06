@@ -30,6 +30,57 @@ def _flip(img):
     return crm.Image(w, h, bytes(out), 4)
 
 
+def defringe(img, passes=2):
+    """Removes the light or coloured halo left around cut-out sprites: edge pixels that are
+    semi-transparent or brighter/greener than the figure are dropped, then the remaining
+    edge pixels take the colour of the inside of the figure."""
+    w, h = img.width, img.height
+    px = bytearray(img.pixels)
+
+    def a(x, y):
+        return px[(y * w + x) * 4 + 3] if 0 <= x < w and 0 <= y < h else 0
+
+    def is_edge(x, y):
+        return a(x - 1, y) == 0 or a(x + 1, y) == 0 or a(x, y - 1) == 0 or a(x, y + 1) == 0
+
+    def inner_color(x, y, skip):
+        rs = gs = bs = n = 0
+        for dy in (-2, -1, 0, 1, 2):
+            for dx in (-2, -1, 0, 1, 2):
+                xx, yy = x + dx, y + dy
+                if (xx, yy) in skip or not (0 <= xx < w and 0 <= yy < h):
+                    continue
+                i = (yy * w + xx) * 4
+                if px[i + 3] == 255:
+                    rs += px[i]; gs += px[i + 1]; bs += px[i + 2]; n += 1
+        return (rs // n, gs // n, bs // n) if n else None
+
+    for _ in range(passes):
+        edges = [(x, y) for y in range(h) for x in range(w) if a(x, y) and is_edge(x, y)]
+        eset = set(edges)
+        drop = []
+        for x, y in edges:
+            i = (y * w + x) * 4
+            r, g, b, al = px[i], px[i + 1], px[i + 2], px[i + 3]
+            inside = inner_color(x, y, eset)
+            lum = r * 0.3 + g * 0.59 + b * 0.11
+            greenish = g > r + 18 and g > b + 18
+            if al < 250 or greenish or inside is None or lum > (inside[0] * 0.3 + inside[1] * 0.59 + inside[2] * 0.11) + 35:
+                drop.append(i)
+        for i in drop:
+            px[i:i + 4] = b"\0\0\0\0"
+    # soften the new outline with the figure's own colours
+    edges = [(x, y) for y in range(h) for x in range(w) if a(x, y) and is_edge(x, y)]
+    eset = set(edges)
+    for x, y in edges:
+        c = inner_color(x, y, eset)
+        i = (y * w + x) * 4
+        if c:
+            px[i:i + 3] = bytes(c)
+        px[i + 3] = 200
+    return crm.Image(w, h, bytes(px), 4)
+
+
 def _pad(img, w, h):
     """Pads to w x h keeping the sprite anchored at its bottom centre (AGS characters)."""
     out = bytearray(w * h * 4)
@@ -137,6 +188,7 @@ def character_scene(game, ch, sf, out_dir, res_dir, view_names):
                 img = sf.load(n)
                 if img is None:
                     continue
+                img = defringe(img)
                 images[(n, flipped)] = _flip(img) if flipped else img
     if not images:
         return None, 0
@@ -271,6 +323,24 @@ def _set_gui(project, scene):
         s += '\n[avventura]\n\ngui/scene="%s"\n' % scene
     with open(p, "w") as f:
         f.write(s)
+
+
+def import_characters(args):
+    """Only the character scenes and frames (graphics), without touching scripts and rooms."""
+    src = os.path.abspath(args.ags_dir)
+    game_dir, project = args.game, args.project
+    res_game = "res://" + os.path.relpath(game_dir, project).replace(os.sep, "/")
+    g = agf.Game(os.path.join(src, "Game.agf"))
+    sf = spr.SpriteFile(os.path.join(src, "acsprset.spr"))
+    scripts = [open(p, encoding="utf-8", errors="replace").read() for p in glob.glob(os.path.join(src, "*.asc"))]
+    views_used = _views_used_by(scripts, g)
+    for ch in g.characters:
+        cid = S.char_id(ch["script_name"])
+        out_dir = os.path.join(game_dir, "characters", cid)
+        shutil.rmtree(os.path.join(out_dir, "frames"), ignore_errors=True)
+        os.makedirs(out_dir, exist_ok=True)
+        path, n = character_scene(g, ch, sf, out_dir, res_game + "/characters/" + cid, views_used.get(ch["script_name"], set()))
+        print("  character %s: %s" % (cid, "%d animations" % n if path else "no graphics"))
 
 
 def import_gui(args):

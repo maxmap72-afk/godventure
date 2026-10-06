@@ -606,6 +606,12 @@ func create_character(id: String) -> AdvCharacter:
 		node.hair_color = Color.from_string(str(p.hair), node.hair_color)
 	if p.has("speed"):
 		node.walk_speed = float(p.speed)
+	if p.has("scale"):
+		node.scale = Vector2.ONE * float(p.scale)
+	if p.has("anim_speed"):
+		for c in node.get_children():
+			if c is AnimatedSprite2D:
+				c.speed_scale = float(p.anim_speed)
 	if p.has("height"):
 		node.height = float(p.height)
 	if p.has("description"):
