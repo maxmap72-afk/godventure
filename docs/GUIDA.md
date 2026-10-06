@@ -431,6 +431,17 @@ evidenziato nel pannello. Le stanze pensate per questa interfaccia dovrebbero la
 libera la fascia bassa (circa 190 pixel), come nei giochi originali; altrimenti la
 telecamera scorre sopra il pannello. I verbi sono configurabili nella proprietà `verbs`.
 
+**Stile AGS (barra icone).** Come nei modelli di Adventure Game Studio: portando il mouse in
+cima allo schermo compare una barra di icone (inventario, salva, carica, menu); l'inventario è
+una finestra con la griglia degli oggetti, i pulsanti "seleziona" e "guarda", le frecce per
+scorrere e "Chiudi". Nelle stanze il mouse funziona come nell'interfaccia a due clic; un
+oggetto selezionato nella finestra resta in mano e si usa cliccando su qualcosa. Tasto **I**:
+apre e chiude l'inventario. Posizioni e immagini vengono da `game/gui/ags_gui.json`, scritto
+dall'importatore AGS a partire dalle GUI del gioco originale (si può modificare a mano:
+coordinate, immagini, azioni `inventory`/`save`/`load`/`menu`/`quit` della barra e
+`select`/`look`/`up`/`down`/`close` della finestra). Senza quel file usa una barra e una
+finestra semplici.
+
 Comandi comuni a tutte le interfacce:
 
 | Tasto | Azione |
@@ -641,8 +652,9 @@ Dalla cartella vengono letti:
   `idle_*` dalla view normale, `talk_*` da quella del parlato, le altre view usate da
   `LockView` con il loro nome, es. `climb_down`); le icone vanno in `game/items/`;
 - le GUI che sono solo immagini (es. una schermata a tutto schermo) diventano *overlay* in
-  `game/overlays/<id>.tscn`, da mostrare con `show id` / `hide id`; le GUI con pulsanti
-  (menu, inventario, salvataggi) sono sostituite dall'interfaccia del motore;
+  `game/overlays/<id>.tscn`, da mostrare con `show id` / `hide id`; la barra delle icone e la
+  finestra dell'inventario diventano l'interfaccia **Stile AGS** (`game/gui/ags_gui.json`,
+  capitolo 10); gli altri pannelli (salvataggi, opzioni) usano i menu del motore;
 - tutte le `roomN.crm` / `roomN.asc`, lo script globale, i video `.ogv`/`.webm` (in
   `game/video/`) e l'audio, se i file sono nella cartella (altrimenti l'elenco finale dice
   quali file copiare in `game/audio/` e con che nome).
@@ -654,6 +666,8 @@ Si possono anche importare pezzi singoli:
 python3 tools/ags/ags_import.py room PERCORSO/room1.crm --asc PERCORSO/room1.asc --player cRay
 # lo script globale (gestori di personaggi e oggetti, funzioni)
 python3 tools/ags/ags_import.py script PERCORSO/GlobalScript.asc --player cRay
+# solo l'interfaccia (barra icone + finestra dell'inventario), senza toccare stanze e script
+python3 tools/ags/ags_import.py gui PERCORSO/CARTELLA_AGS
 # solo gli sprite, come PNG
 python3 tools/ags/spr.py PERCORSO/acsprset.spr --out cartella/ [--only 26,37]
 ```

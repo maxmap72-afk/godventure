@@ -82,10 +82,15 @@ class Game:
             for c in m.find("Controls") or []:
                 controls.append({"type": c.tag, "name": _t(c, "Name"), "x": _i(c, "Left"), "y": _i(c, "Top"),
                                  "w": _i(c, "Width"), "h": _i(c, "Height"), "image": _i(c, "Image", 0),
-                                 "text": _t(c, "Text"), "color": color(_t(c, "TextColor", "15"))})
-            self.guis.append({"name": _t(n, "Name"), "x": _i(n, "Left"), "y": _i(n, "Top"), "w": _i(n, "Width"),
+                                 "over": _i(c, "MouseoverImage", 0), "pressed": _i(c, "PushedImage", 0),
+                                 "text": _t(c, "Text"), "color": color(_t(c, "TextColor", "15")),
+                                 "onclick": _t(c, "OnClick"), "click_action": _t(c, "ClickAction"),
+                                 "mode": _i(c, "NewModeNumber", 0), "visible": _t(c, "Visible", "True") == "True",
+                                 "item_w": _i(c, "ItemWidth", 0), "item_h": _i(c, "ItemHeight", 0)})
+            self.guis.append({"name": _t(n, "Name"), "id": _i(n, "ID"), "x": _i(n, "Left"), "y": _i(n, "Top"), "w": _i(n, "Width"),
                               "h": _i(n, "Height"), "bg_color": _i(n, "BackgroundColor"), "bg_image": _i(n, "BackgroundImage"),
                               "visible": _t(n, "Visible") == "True", "popup": _t(n, "PopupStyle", "Normal"),
+                              "popup_y": _i(n, "PopupYPos"),
                               "transparency": _i(n, "Transparency"), "controls": controls})
 
         types = {}

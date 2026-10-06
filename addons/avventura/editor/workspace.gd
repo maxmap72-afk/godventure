@@ -8,6 +8,7 @@ const Highlighter := preload("res://addons/avventura/editor/adv_syntax_highlight
 const GUIS := {
 	"two_click": "res://addons/avventura/gui/two_click_gui.tscn",
 	"scumm": "res://addons/avventura/gui/scumm_gui.tscn",
+	"ags": "res://addons/avventura/gui/ags_gui.tscn",
 }
 const KEYWORDS := ["on", "dialog", "option", "function", "var", "item", "character", "title",
 	"player", "start", "if", "elif", "else", "while", "set", "walk", "face", "anim", "wait",
@@ -39,6 +40,7 @@ const T := {
 	"gui": ["Interface:", "Interfaccia:"],
 	"two_click": ["Two-click (modern)", "Due click (moderna)"],
 	"scumm": ["SCUMM verbs", "Verbi SCUMM"],
+	"ags": ["AGS style (icon bar)", "Stile AGS (barra icone)"],
 	"custom": ["Custom", "Personalizzata"],
 	"id": ["Id (lowercase, no spaces)", "Id (minuscolo, senza spazi)"],
 	"name": ["Name shown to the player", "Nome mostrato al giocatore"],
@@ -111,6 +113,7 @@ func _build() -> void:
 	gui_select = OptionButton.new()
 	gui_select.add_item(t("two_click"), 0)
 	gui_select.add_item(t("scumm"), 1)
+	gui_select.add_item(t("ags"), 3)
 	gui_select.add_item(t("custom"), 2)
 	gui_select.item_selected.connect(_on_gui_selected)
 	bar.add_child(gui_select)
@@ -487,20 +490,23 @@ func _tool_done(exit_code: int, text: String) -> void:
 
 func _sync_gui_select() -> void:
 	var cur := str(ProjectSettings.get_setting("avventura/gui/scene", GUIS.two_click))
-	gui_select.set_item_disabled(2, true)
+	gui_select.set_item_disabled(gui_select.get_item_index(2), true)
 	if cur == GUIS.two_click:
 		gui_select.select(0)
 	elif cur == GUIS.scumm:
-		gui_select.select(1)
+		gui_select.select(gui_select.get_item_index(1))
+	elif cur == GUIS.ags:
+		gui_select.select(gui_select.get_item_index(3))
 	else:
-		gui_select.set_item_disabled(2, false)
-		gui_select.select(2)
+		gui_select.set_item_disabled(gui_select.get_item_index(2), false)
+		gui_select.select(gui_select.get_item_index(2))
 
 
 func _on_gui_selected(index: int) -> void:
-	if index == 2:
+	var id := gui_select.get_item_id(index)
+	if id == 2:
 		return
-	ProjectSettings.set_setting("avventura/gui/scene", GUIS.two_click if index == 0 else GUIS.scumm)
+	ProjectSettings.set_setting("avventura/gui/scene", [GUIS.two_click, GUIS.scumm, "", GUIS.ags][id])
 	ProjectSettings.save()
 
 

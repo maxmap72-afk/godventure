@@ -133,11 +133,40 @@ func contains_point(global_point: Vector2) -> bool:
 			var lp: Vector2 = c.to_local(global_point)
 			var rect := sprite_rect(c)
 			if rect.has_point(lp):
-				if not pixel_perfect or not c is Sprite2D:
+				if not pixel_perfect:
 					return true
-				if c.is_pixel_opaque(lp):
+				if c is Sprite2D and c.is_pixel_opaque(lp):
+					return true
+				if c is AnimatedSprite2D and _frame_opaque(c, lp - rect.position):
 					return true
 	return _fallback_rect().has_point(to_local(global_point))
+
+
+static var _alpha_cache: Dictionary = {}
+
+
+## Is the pixel [param p] (from the frame's top-left corner) of the current frame opaque?
+static func _frame_opaque(s: AnimatedSprite2D, p: Vector2) -> bool:
+	var tex: Texture2D = s.sprite_frames.get_frame_texture(s.animation, s.frame)
+	if tex == null:
+		return false
+	var img: Image = _alpha_cache.get(tex)
+	if img == null:
+		img = tex.get_image()
+		if img == null:
+			return true
+		if img.is_compressed():
+			img.decompress()
+		_alpha_cache[tex] = img
+	var x := int(p.x)
+	var y := int(p.y)
+	if s.flip_h:
+		x = img.get_width() - 1 - x
+	if s.flip_v:
+		y = img.get_height() - 1 - y
+	if x < 0 or y < 0 or x >= img.get_width() or y >= img.get_height():
+		return false
+	return img.get_pixel(x, y).a > 0.1
 
 
 ## Area used when there is no shape and no sprite (overridden by characters).

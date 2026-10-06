@@ -4,6 +4,7 @@
   python3 tools/ags/ags_import.py room PATH/room1.crm [--asc PATH/room1.asc] [--game game] [--player cRay]
   python3 tools/ags/ags_import.py script PATH/GlobalScript.asc [--game game] [--player cRay]
   python3 tools/ags/ags_import.py game PATH/AGS_PROJECT_FOLDER [--game game] [--project .]
+  python3 tools/ags/ags_import.py gui PATH/AGS_PROJECT_FOLDER     (only the icon bar + inventory window)
 
 A room becomes game/rooms/roomN/: roomN.tscn (background, walkable areas with holes,
 hotspots, regions, walk-behinds, objects), roomN.adv (translated script) and ags/ (the
@@ -337,7 +338,9 @@ def main():
     s.add_argument("--out")
     g = sub.add_parser("game", help="import a whole AGS project folder (Game.agf, acsprset.spr, rooms, scripts)")
     g.add_argument("ags_dir")
-    for p in (r, s, g):
+    u = sub.add_parser("gui", help="only the interface (icon bar + inventory window) from Game.agf")
+    u.add_argument("ags_dir")
+    for p in (r, s, g, u):
         p.add_argument("--game", default="game")
         p.add_argument("--project", default=".")
         p.add_argument("--player", default="player", help="AGS script name of the main character, e.g. cRay")
@@ -347,6 +350,9 @@ def main():
     if a.cmd == "game":
         import ags_game
         ags_game.import_game(a)
+    elif a.cmd == "gui":
+        import ags_game
+        ags_game.import_gui(a)
     elif a.cmd == "room":
         import_room(a)
     else:

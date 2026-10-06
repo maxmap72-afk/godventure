@@ -44,6 +44,7 @@ tools/adv.py, tools/adv_mcp.py   CLI and MCP server
 tools/ags/                 AGS 3.x importer: `ags_import.py game AGS_DIR` (whole project), crm.py (rooms),
                            spr.py (sprites), agf.py (Game.agf), masks.py, ags_script.py (script translator)
 game/overlays/<id>.tscn    full-screen pictures/panels shown with `show ID` (imported AGS GUIs)
+game/gui/ags_gui.json      layout of the AGS-style interface (gui/ags_gui.tscn): icon bar + inventory window
 ```
 
 - Ids are snake_case. A hotspot's id is its `hotspot_id` or its node name in snake_case.
@@ -112,7 +113,7 @@ Full reference (Italian): `docs/GUIDA.md`.
 - `core/adv_controller.gd` – text command language (console, TCP remote, batch, tests).
 - `core/adv_linter.gd`, `adv_scaffold.gd`, `adv_pathfinder.gd` (visibility graph).
 - `nodes/` – AdvRoom, AdvHotspot, AdvCharacter (placeholder puppet), AdvWalkArea, AdvEntry.
-- `gui/` – AdvGui base, TwoClickGui (default), ScummGui; `editor/` – workspace tab, highlighter.
+- `gui/` – AdvGui base, TwoClickGui (default), ScummGui, AgsGui (icon bar + inventory window); `editor/` – workspace tab, highlighter.
 Command line flags (after `--`): `--adv-lint`, `--adv-test[=file]`, `--adv-run="cmds"`,
 `--adv-load=/--adv-save=path`, `--adv-start=room[:entry]`, `--adv-fast`, `--adv-remote[=port]`,
 `--adv-screenshot=path`, `--adv-gui=scumm|two_click`, `--adv-game-dir=res://...`, `--adv-seed=N`.

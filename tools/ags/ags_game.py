@@ -161,7 +161,8 @@ def character_scene(game, ch, sf, out_dir, res_dir, view_names):
     speed = ch["speed"] * 40.0 / (ch["anim_delay"] + 1)
     t.node("\n".join(['[node name="%s" type="Area2D"]' % cid, 'script = ExtResource("%s")' % s_char,
                       "hotspot_id = %s" % _q(cid), "display_name = %s" % _q(ch["name"] or cid),
-                      "text_color = %s" % _color(ch["color"]), "walk_speed = %.1f" % speed, "height = %d.0" % H]))
+                      "text_color = %s" % _color(ch["color"]), "walk_speed = %.1f" % speed, "height = %d.0" % H,
+                      "pixel_perfect = true"]))
     first = "idle_down" if any(a[0] == "idle_down" for a in anims) else anims[0][0]
     t.node("\n".join(['[node name="Sprite" type="AnimatedSprite2D" parent="."]', 'sprite_frames = SubResource("SpriteFrames_1")',
                       'animation = &"%s"' % first, "offset = Vector2(0, %d)" % -(H // 2)]))
@@ -199,6 +200,102 @@ def overlay_scene(gui, sprites, path):
         t.node(n)
     with open(path, "w") as f:
         f.write(t.text())
+
+
+# --- the playable interface: icon bar + inventory window ------------------------------------------
+
+ICON_ACTIONS = [("inv", "inventory"), ("save", "save"), ("load", "load"), ("restore", "load"),
+                ("quit", "quit"), ("exit", "quit"), ("about", "menu"), ("panel", "menu"), ("option", "menu"),
+                ("setting", "menu"), ("control", "menu")]
+INV_ACTIONS = [("select", "select"), ("look", "look"), ("ok", "close"), ("close", "close"), ("chiudi", "close"),
+               ("up", "up"), ("down", "down")]
+
+
+def _action(name, table):
+    n = name.lower()
+    for key, action in table:
+        if key in n:
+            return action
+    return ""
+
+
+def gui_layout(game, sprites):
+    """game/gui/ags_gui.json for the engine's AgsGui: the icon bar (GUI that pops up at the top)
+    and the inventory window (GUI with an inventory control) of the AGS project."""
+    def img(n):
+        e = sprites.export(n) if n else None
+        return e[0] if e else ""
+
+    def button(c, table):
+        b = {"name": c["name"], "x": c["x"], "y": c["y"], "w": c["w"], "h": c["h"],
+             "image": img(c["image"]), "over": img(c["over"]), "pressed": img(c["pressed"]),
+             "action": _action(c["name"] + " " + c["onclick"], table)}
+        if c["text"] and c["text"] != "New Button" and not c["image"] or b["action"] == "close":
+            b["text"] = c["text"]
+            b["text_color"] = c["color"]
+        return b
+
+    def panel(gui):
+        d = {"name": gui["name"], "x": gui["x"], "y": gui["y"], "w": gui["w"], "h": gui["h"], "image": img(gui["bg_image"])}
+        if gui["bg_color"]:
+            d["color"] = agf.color(gui["bg_color"])
+        return d
+
+    out = {}
+    for gui in game.guis:
+        inv = next((c for c in gui["controls"] if c["type"] == "GUIInventory"), None)
+        if inv and "inventory" not in out:
+            d = panel(gui)
+            d["items"] = {"x": inv["x"], "y": inv["y"], "w": inv["w"], "h": inv["h"],
+                          "cell": max(inv["item_w"], inv["item_h"], 100)}
+            d["buttons"] = [button(c, INV_ACTIONS) for c in gui["controls"] if c["type"] == "GUIButton" and c["visible"]]
+            out["inventory"] = d
+        elif gui["popup"] == "MouseYPos" and "iconbar" not in out:
+            d = panel(gui)
+            d["popup_y"] = gui.get("popup_y", 0) or 16
+            d["buttons"] = [button(c, ICON_ACTIONS) for c in gui["controls"] if c["type"] == "GUIButton" and c["visible"]]
+            out["iconbar"] = d
+    return out
+
+
+def _set_gui(project, scene):
+    p = os.path.join(project, "project.godot")
+    if not os.path.exists(p):
+        return
+    s = open(p).read()
+    if re.search(r"(?m)^gui/scene=", s):
+        s = re.sub(r"(?m)^gui/scene=.*$", 'gui/scene="%s"' % scene, s)
+    elif "[avventura]" in s:
+        s = s.replace("[avventura]", '[avventura]\n\ngui/scene="%s"' % scene, 1)
+    else:
+        s += '\n[avventura]\n\ngui/scene="%s"\n' % scene
+    with open(p, "w") as f:
+        f.write(s)
+
+
+def import_gui(args):
+    """Only the interface (icon bar + inventory window), without touching rooms and scripts."""
+    src = os.path.abspath(args.ags_dir)
+    game_dir, project = args.game, args.project
+    res_game = "res://" + os.path.relpath(game_dir, project).replace(os.sep, "/")
+    g = agf.Game(os.path.join(src, "Game.agf"))
+    sf = spr.SpriteFile(os.path.join(src, "acsprset.spr"))
+    sprites = SpriteExporter(sf, os.path.join(game_dir, "ags_sprites"), res_game + "/ags_sprites")
+    if not _write_gui(g, sprites, game_dir, project):
+        print("no icon bar or inventory window found in Game.agf")
+
+
+def _write_gui(g, sprites, game_dir, project):
+    import json
+    layout = gui_layout(g, sprites)
+    if not layout:
+        return None
+    os.makedirs(os.path.join(game_dir, "gui"), exist_ok=True)
+    with open(os.path.join(game_dir, "gui", "ags_gui.json"), "w") as f:
+        json.dump(layout, f, indent=1, ensure_ascii=False)
+    _set_gui(project, "res://addons/avventura/gui/ags_gui.tscn")
+    print("  interface: AGS style (%s) from %s" % (", ".join(sorted(layout)), ", ".join(d["name"] for d in layout.values())))
+    return layout
 
 
 # --- game ----------------------------------------------------------------------------------------
@@ -296,8 +393,11 @@ def import_game(args):
         for x in overlays:
             overlay_scene(x, sprites, os.path.join(game_dir, "overlays", S.gui_id(x["name"]) + ".tscn"))
         print("  overlays (AGS GUIs used as pictures): " + ", ".join(S.gui_id(x["name"]) for x in overlays))
+    layout = _write_gui(g, sprites, game_dir, project) if sf else None
+    if layout:
+        engine_guis = [x for x in engine_guis if x not in [d["name"] for d in layout.values()]]
     if engine_guis:
-        notes.append("GUIs replaced by the engine's interface (menus, inventory, save/load): " + ", ".join(engine_guis))
+        notes.append("GUIs replaced by the engine's menus (save/load/settings): " + ", ".join(engine_guis))
 
     # audio and video
     missing = []
