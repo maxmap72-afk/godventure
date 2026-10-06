@@ -281,7 +281,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _in_menu:
 		return
-	if Adv.is_speaking() and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+	if (Adv.is_speaking() or Adv.is_playing_video()) and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
 		Adv.skip_line()
 		get_viewport().set_input_as_handled()
 		return
@@ -326,7 +326,9 @@ func _on_escape() -> void:
 		if not title_mode:
 			_close_all_menus()
 		return
-	if Adv.in_cutscene():
+	if Adv.is_playing_video():
+		Adv.skip_line()
+	elif Adv.in_cutscene():
 		Adv.skip_cutscene()
 	elif Adv.selected_item != "":
 		Adv.select_item("")
@@ -383,7 +385,7 @@ func _on_speech_started(char_id: String, text: String) -> void:
 	_on_speech_finished(char_id)
 	var node: Control
 	var anchor = Adv.speech_anchor(char_id)
-	if char_id == "narrator" or anchor == null:
+	if char_id == "narrator" or (anchor == null and not Adv.speech_pos.has(char_id)):
 		var panel := PanelContainer.new()
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var l := _outlined_label(speech_font_size, Adv.text_color(char_id) if char_id != "narrator" else Color(1, 0.97, 0.9), 4)
@@ -424,7 +426,9 @@ func _place_speech(char_id: String, node: Control) -> void:
 	node.size = s
 	var anchor = Adv.speech_anchor(char_id) if char_id != "narrator" else null
 	var p: Vector2
-	if anchor == null:
+	if Adv.speech_pos.has(char_id):
+		p = Adv.speech_pos[char_id]
+	elif anchor == null:
 		p = Vector2((vs.x - s.x) / 2.0, vs.y * 0.12)
 	else:
 		p = anchor - Vector2(s.x / 2.0, s.y)

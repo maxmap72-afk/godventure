@@ -55,6 +55,16 @@ expect said("room look")
 do kick lever
 expect said("global fallback")
 
+# regions (AGS WalksOnto / WalksOff), relative walks
+walk 350 650
+wait 0.1
+expect trapped == 1
+walk 200 650
+wait 0.1
+expect escaped
+run walk max by 0, -50
+expect near(max, default, 60)
+
 # walk areas: the island is unreachable until the bridge is enabled
 walk gem
 expect said("unreachable")
@@ -132,3 +142,17 @@ expect a_entered == 2
 expect room_of(sam) == "a"
 expect near(sam, default)
 expect not shown(box)
+
+# overlays (game/overlays/*.tscn, like AGS GUIs)
+expect not shown(banner)
+run show banner
+expect shown(banner)
+run hide banner
+expect not shown(banner)
+
+# speech at a fixed screen position (AGS SayAt)
+run max@100,50: Up here!
+
+# moving the controlled character to another room is a room change (AGS ChangeRoom)
+run place max in b at 200, 600
+expect room() == "b"

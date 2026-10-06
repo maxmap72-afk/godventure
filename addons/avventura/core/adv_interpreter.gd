@@ -103,7 +103,7 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 	match st.k:
 		"say":
 			var text := AdvExpr.render_template(st.parts, ctx)
-			await adv.say(st.who, text, st.mood)
+			await adv.say(st.who, text, st.mood, st.get("at"))
 		"if":
 			for b in st.branches:
 				if b.cond == null or AdvExpr.truthy(eval(b.cond, ctx)):
@@ -129,7 +129,14 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 			else:
 				adv.set_var(st.name, v)
 		"walk":
-			await adv.walk(st.who, _loc(st.loc), not st.nowait)
+			var target = _loc(st.loc)
+			if st.loc.has("by"):
+				var ch: AdvCharacter = adv.get_character(st.who)
+				if ch == null:
+					error("walk: '%s' is not in this room" % st.who, ctx)
+					return CONT
+				target = ch.room_position() + st.loc.by
+			await adv.walk(st.who, target, not st.nowait, st.get("anywhere", false))
 		"face":
 			adv.face(st.who, st.to)
 		"anim":
@@ -144,15 +151,23 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 		"pickup":
 			await adv.pickup(st.obj, st.item)
 		"show", "hide":
-			adv.set_object_visible(st.obj, st.k == "show", st.room)
+			if st.get("fade", 0.0) > 0.0:
+				await adv.fade_object(st.obj, st.k == "show", st.fade, st.room)
+			else:
+				adv.set_object_visible(st.obj, st.k == "show", st.room)
 		"enable", "disable":
 			adv.set_object_enabled(st.obj, st.k == "enable", st.room)
 		"state":
 			adv.set_object_state(st.obj, st.value, st.room)
 		"goto":
-			await adv.change_room(st.room, st.at)
+			await adv.change_room(st.room, st.at, st.get("pos"))
 		"place":
-			adv.place(st.who, st.room, _loc(st.loc) if st.loc != null else null)
+			var loc = _loc(st.loc) if st.loc != null else null
+			if adv.resolve_char(st.who) == adv.state.player and st.room != "" and st.room != adv.state.room:
+				# moving the controlled character to another room is a room change (like AGS)
+				await adv.change_room(st.room, loc if loc is String else "", loc if loc is Vector2 else null)
+			else:
+				adv.place(st.who, st.room, loc)
 		"control":
 			await adv.set_player(st.name)
 		"dialog":
@@ -199,6 +214,8 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 					return await exec(st.body[mini(count, n - 1)], ctx)
 		"sound":
 			adv.play_sound(st.name)
+		"video":
+			await adv.play_video(st.name)
 		"music":
 			if st.name == "stop":
 				adv.stop_music()

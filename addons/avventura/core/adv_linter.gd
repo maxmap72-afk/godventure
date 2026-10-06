@@ -207,7 +207,7 @@ func _stmt(st: Dictionary, scope: String, path: String, locals: Dictionary, in_d
 			var r: String = st.room if st.room != "" else scope
 			if st.room != "" and not reg.rooms.has(st.room):
 				_add(path, line, "error", "unknown room '%s'%s" % [st.room, _hint(st.room, reg.rooms.keys())])
-			elif r != "":
+			elif r != "" and not (st.k in ["show", "hide"] and reg.overlays.has(st.obj)):
 				_object(st.obj, r, path, line)
 		"goto":
 			if not reg.rooms.has(st.room):
@@ -260,6 +260,9 @@ func _stmt(st: Dictionary, scope: String, path: String, locals: Dictionary, in_d
 		"sound", "music":
 			if st.name != "stop" and adv._audio(st.name) == null:
 				_add(path, line, "warning", "%s '%s' not found in %s/audio" % [st.k, st.name, reg.game_dir])
+		"video":
+			if adv._video_path(st.name) == "":
+				_add(path, line, "warning", "video '%s' not found in %s/video" % [st.name, reg.game_dir])
 
 
 func _expr(ast: Variant, scope: String, path: String, line: int, locals: Dictionary) -> void:
@@ -453,6 +456,10 @@ func _scan_node(n: Node, info: Dictionary) -> void:
 		elif c is AdvWalkArea:
 			info.areas[c.get_area_id()] = true
 			info.areas[String(c.name)] = true
+		elif c is AdvRegion:
+			info.areas[c.get_region_id()] = true
+			info.hotspots[c.get_region_id()] = {"exit_to": "", "exit_entry": "", "pickup_item": "", "is_character": false,
+				"verb": "walk_onto", "description": "region"}
 		if c is Node2D:
 			info.markers[String(c.name)] = true
 			info.markers[AdvHotspot.to_id(c.name)] = true

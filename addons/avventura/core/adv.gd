@@ -86,6 +86,10 @@ var save_dir := "user://saves"
 var prefs := {"text_speed": 1.0, "auto_advance": true, "music_volume": 0.8, "sfx_volume": 1.0, "fullscreen": false}
 
 var _main: Node
+const OVERLAYS := "_overlays"
+var _overlay_layer: CanvasLayer
+## Fixed screen positions of the lines being spoken (say with @X,Y).
+var speech_pos: Dictionary = {}
 var _fade_rect: ColorRect
 var _follow: Node2D
 var _approaching := false
@@ -100,6 +104,8 @@ var _shake := 0.0
 var _warned: Dictionary = {}
 var _entered := 0
 var _icons: Dictionary = {}
+var _regions_inside: Dictionary = {}
+var _playing_video := false
 
 
 class _Waiter:
@@ -214,6 +220,10 @@ func _build_world() -> void:
 	camera.position_smoothing_speed = 6.0
 	world.add_child(camera)
 	camera.make_current()
+	_overlay_layer = CanvasLayer.new()
+	_overlay_layer.name = "Overlays"
+	_overlay_layer.layer = 5
+	_main.add_child(_overlay_layer)
 	var layer := CanvasLayer.new()
 	layer.name = "Fade"
 	layer.layer = 100
@@ -252,6 +262,8 @@ func _create_gui() -> void:
 func _process(delta: float) -> void:
 	if room and not game_over and not get_tree().paused:
 		state.playtime += delta
+		if mode == Mode.IDLE:  # like AGS, region events wait for blocking scripts to end
+			_check_regions()
 	if camera == null:
 		return
 	if _follow and is_instance_valid(_follow):
@@ -309,16 +321,17 @@ func new_game(start: String = "") -> void:
 
 
 ## Moves the player to another room, running `on exit` / `on setup` / `on enter`.
-func change_room(room_id: String, at: String = "") -> void:
+## [param pos] (room coordinates) places the player at an exact point instead of an entry.
+func change_room(room_id: String, at: String = "", pos: Variant = null) -> void:
 	if not registry.rooms.has(room_id):
 		script_error("unknown room '%s' (rooms: %s)" % [room_id, ", ".join(registry.rooms.keys())])
 		return
 	_set_busy(true)
-	await _enter_room(room_id, at, "goto")
+	await _enter_room(room_id, at, "goto", pos)
 	_set_busy(false)
 
 
-func _enter_room(room_id: String, at: String, how: String) -> void:
+func _enter_room(room_id: String, at: String, how: String, pos: Variant = null) -> void:
 	var from := state.room
 	_in_transition = true
 	if room:
@@ -350,6 +363,8 @@ func _enter_room(room_id: String, at: String, how: String) -> void:
 			pc.teleport(c.pos if c.get("pos") is Vector2 else pc.room_position())
 			if str(c.get("dir", "")) in DIRECTIONS:
 				pc.face_dir(c.dir)
+		elif pos is Vector2:
+			pc.teleport(pos)
 		else:
 			var e := _entry_point(at, from)
 			pc.teleport(e.pos)
@@ -357,6 +372,7 @@ func _enter_room(room_id: String, at: String, how: String) -> void:
 				pc.face_dir(e.face)
 		c.room = room_id
 	_setup_camera()
+	_regions_inside = _regions_at_player()
 	log_line("[room] %s" % room_id)
 	await _room_event("setup")
 	if room == null:
@@ -369,6 +385,49 @@ func _enter_room(room_id: String, at: String, how: String) -> void:
 	room_entered.emit(room_id)
 	if how == "goto":
 		await _room_event("enter")
+
+
+## Regions: `on walk_onto REGION:` / `on walk_off REGION:` when the player crosses them.
+func _regions_at_player() -> Dictionary:
+	var out := {}
+	if room == null or player == null:
+		return out
+	var p := player.room_position()
+	for r in room.get_regions():
+		if r.enabled and r.contains(p, room):
+			out[r.get_region_id()] = true
+	return out
+
+
+func _check_regions() -> void:
+	if room == null or player == null or _in_transition:
+		return
+	var now := _regions_at_player()
+	if now == _regions_inside:
+		return
+	var entered := []
+	var left := []
+	for id in now:
+		if not _regions_inside.has(id):
+			entered.append(id)
+	for id in _regions_inside:
+		if not now.has(id):
+			left.append(id)
+	_regions_inside = now
+	for id in left:
+		_region_event("walk_off", id)
+	for id in entered:
+		_region_event("walk_onto", id)
+
+
+func _region_event(event: String, id: String) -> void:
+	var h := registry.find_handler(state.room, event, id, "", false)
+	if h.is_empty():
+		return
+	log_line("[region] %s %s" % [event, id])
+	_set_busy(true)
+	await interp.run_handler(h, {"verb": event, "target": id, "item": ""})
+	_set_busy(false)
 
 
 func _room_event(event: String) -> void:
@@ -392,6 +451,7 @@ func _unload_room() -> void:
 
 ## Applies saved object overrides (visibility, state, enabled) to the room nodes.
 func _apply_room_state() -> void:
+	_apply_overlays()
 	var prefix := state.room + "/"
 	for key in state.objects:
 		if not key.begins_with(prefix):
@@ -406,7 +466,7 @@ func _apply_room_state() -> void:
 		if o.has("enabled"):
 			if n is AdvHotspot:
 				n.interactive = o.enabled
-			elif n is AdvWalkArea:
+			elif n is AdvWalkArea or n is AdvRegion:
 				n.enabled = o.enabled
 		if o.has("state"):
 			_apply_state(n, str(o.state))
@@ -546,6 +606,12 @@ func create_character(id: String) -> AdvCharacter:
 		node.hair_color = Color.from_string(str(p.hair), node.hair_color)
 	if p.has("speed"):
 		node.walk_speed = float(p.speed)
+	if p.has("scale"):
+		node.scale = Vector2.ONE * float(p.scale)
+	if p.has("anim_speed"):
+		for c in node.get_children():
+			if c is AnimatedSprite2D:
+				c.speed_scale = float(p.anim_speed)
 	if p.has("height"):
 		node.height = float(p.height)
 	if p.has("description"):
@@ -756,11 +822,16 @@ func select_item(item: String) -> void:
 # --- commands used by scripts -------------------------------------------------------------
 
 ## Shows a line of dialogue and waits for it (click to skip).
-func say(who: String, text: String, mood: String = "") -> void:
+## [param at]: optional fixed screen position of the text (top-left), like AGS SayAt.
+func say(who: String, text: String, mood: String = "", at: Variant = null) -> void:
 	var id := resolve_char(who)
 	log_line("%s: %s" % [id, text])
 	var ch := get_character(id)
 	speaking[id] = true
+	if at is Vector2:
+		speech_pos[id] = at
+	else:
+		speech_pos.erase(id)
 	speech_started.emit(id, text)
 	if ch:
 		ch.start_talking(mood)
@@ -776,6 +847,7 @@ func say(who: String, text: String, mood: String = "") -> void:
 		ch.stop_talking()
 	speaking.erase(id)
 	speech_finished.emit(id)
+	speech_pos.erase(id)
 
 
 func skip_line() -> void:
@@ -786,7 +858,7 @@ func is_speaking() -> bool:
 	return not speaking.is_empty()
 
 
-func walk(who: String, target: Variant, wait_arrival: bool = true) -> void:
+func walk(who: String, target: Variant, wait_arrival: bool = true, anywhere: bool = false) -> void:
 	var ch := get_character(who)
 	if ch == null:
 		script_error("walk: '%s' is not in room '%s'" % [resolve_char(who), state.room])
@@ -795,12 +867,16 @@ func walk(who: String, target: Variant, wait_arrival: bool = true) -> void:
 	if pos == null:
 		return
 	if fast or skipping:
-		_jump(ch, pos)
+		if anywhere:
+			ch.stop()
+			ch.set_room_position(pos)
+		else:
+			_jump(ch, pos)
 		return
 	if wait_arrival:
-		await ch.move_to(pos)
+		await ch.move_to(pos, anywhere)
 	else:
-		ch.move_to(pos)
+		ch.move_to(pos, anywhere)
 
 
 ## Instant move that still respects the walk areas: false (and no move) when unreachable.
@@ -833,8 +909,8 @@ func anim(who: String, anim_name: String, wait_end: bool = true, loop: bool = fa
 		script_error("anim: '%s' is not in room '%s'" % [resolve_char(who), state.room])
 		return
 	if fast or skipping:
-		if loop:
-			ch.play_anim(anim_name, false, true)
+		if loop or anim_name in ["idle", "stop"]:
+			ch.play_anim(anim_name, false, loop)
 		return
 	if wait_end:
 		await ch.play_anim(anim_name, true, loop)
@@ -920,6 +996,25 @@ func set_object_visible(obj: String, value: bool, room_id: String = "") -> void:
 	_set_object(obj, "visible", value, room_id)
 
 
+## Shows or hides an object with a dissolve of [param secs] seconds (`show obj fade 2`).
+func fade_object(obj: String, value: bool, secs: float, room_id: String = "") -> void:
+	var n := _object_node(obj) if room_id == "" or room_id == state.room else null
+	if n == null or not n is CanvasItem or fast or skipping or secs <= 0.0:
+		set_object_visible(obj, value, room_id)
+		return
+	var item := n as CanvasItem
+	var alpha := item.modulate.a if item.visible else 0.0
+	if value:
+		item.modulate.a = alpha
+		set_object_visible(obj, true, room_id)
+	var tw := create_tween()
+	tw.tween_property(item, "modulate:a", 1.0 if value else 0.0, secs)
+	await tw.finished
+	if not value:
+		set_object_visible(obj, false, room_id)
+	item.modulate.a = 1.0
+
+
 func set_object_enabled(obj: String, value: bool, room_id: String = "") -> void:
 	_set_object(obj, "enabled", value, room_id)
 
@@ -929,6 +1024,9 @@ func set_object_state(obj: String, value: String, room_id: String = "") -> void:
 
 
 func _set_object(obj: String, key: String, value: Variant, room_id: String) -> void:
+	if key == "visible" and room_id == "" and registry.overlays.has(obj) and _object_node(obj) == null:
+		set_overlay_visible(obj, value)
+		return
 	var rid := room_id if room_id != "" else state.room
 	if not registry.rooms.has(rid):
 		script_error("unknown room '%s'" % rid)
@@ -950,6 +1048,8 @@ func _set_object(obj: String, key: String, value: Variant, room_id: String) -> v
 			elif n is AdvWalkArea:
 				n.enabled = value
 				room.rebuild_walkable()
+			elif n is AdvRegion:
+				n.enabled = value
 		"state":
 			_apply_state(n, str(value))
 
@@ -972,6 +1072,9 @@ func _object_node(id: String) -> Node:
 	var a := room.find_walk_area(id)
 	if a:
 		return a
+	for r in room.get_regions():
+		if r.get_region_id() == id:
+			return r
 	return room.find_marker(id)
 
 
@@ -988,6 +1091,8 @@ func get_object_state(obj: String, room_id: String = "") -> String:
 
 
 func is_object_visible(obj: String, room_id: String = "") -> bool:
+	if room_id == "" and registry.overlays.has(obj) and _object_node(obj) == null:
+		return bool(state.object(OVERLAYS, obj).get("visible", false))
 	var rid := room_id if room_id != "" else state.room
 	var o := state.object(rid, obj)
 	if o.has("visible"):
@@ -1008,7 +1113,7 @@ func is_object_enabled(obj: String, room_id: String = "") -> bool:
 		var n := _object_node(obj)
 		if n is AdvHotspot:
 			return n.interactive
-		if n is AdvWalkArea:
+		if n is AdvWalkArea or n is AdvRegion:
 			return n.enabled
 	return true
 
@@ -1162,6 +1267,52 @@ func play_music(music_name: String) -> void:
 	_music_name = music_name
 	_music.stream = stream
 	_music.play()
+
+
+## Plays a full-screen video (game/video/NAME.ogv). Click or Esc skips it.
+func play_video(video_name: String) -> void:
+	var path := _video_path(video_name)
+	if path == "":
+		_warn_once("video '%s' not found in %s/video" % [video_name, game_dir])
+		return
+	log_line("[video] " + video_name)
+	if fast or skipping or DisplayServer.get_name() == "headless":
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 90
+	var bg := ColorRect.new()
+	bg.color = Color.BLACK
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(bg)
+	var player_node := VideoStreamPlayer.new()
+	player_node.stream = load(path)
+	player_node.expand = true
+	player_node.set_anchors_preset(Control.PRESET_FULL_RECT)
+	player_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(player_node)
+	add_child(layer)
+	var w := _Waiter.new()
+	player_node.finished.connect(w.done)
+	line_skipped.connect(w.done, CONNECT_ONE_SHOT)
+	skip_started.connect(w.done, CONNECT_ONE_SHOT)
+	_playing_video = true
+	player_node.play()
+	await w.finished
+	_playing_video = false
+	layer.queue_free()
+
+
+func _video_path(video_name: String) -> String:
+	for dir in ["video", "videos", "audio"]:
+		for ext in ["ogv", "webm"]:
+			var p := "%s/%s/%s.%s" % [game_dir, dir, video_name, ext]
+			if ResourceLoader.exists(p) or FileAccess.file_exists(p):
+				return p
+	return ""
+
+
+func is_playing_video() -> bool:
+	return _playing_video
 
 
 func stop_music() -> void:
@@ -1392,6 +1543,30 @@ func list_saves() -> Array:
 	return out
 
 
+# --- overlays ----------------------------------------------------------------------------------
+
+## Shows or hides a full-screen overlay (game/overlays/ID.tscn), drawn above the room and
+## below the interface. Imported AGS GUIs become overlays.
+func set_overlay_visible(id: String, value: bool) -> void:
+	state.set_object(OVERLAYS, id, "visible", value)
+	log_line("[overlay] %s %s" % [id, "show" if value else "hide"])
+	_apply_overlays()
+
+
+func _apply_overlays() -> void:
+	if _overlay_layer == null:
+		return
+	for c in _overlay_layer.get_children():
+		if not bool(state.object(OVERLAYS, str(c.name)).get("visible", false)):
+			_overlay_layer.remove_child(c)
+			c.queue_free()
+	for id in registry.overlays:
+		if bool(state.object(OVERLAYS, id).get("visible", false)) and not _overlay_layer.has_node(NodePath(id)):
+			var inst: Node = load(registry.overlays[id]).instantiate()
+			inst.name = id
+			_overlay_layer.add_child(inst)
+
+
 # --- internals ---------------------------------------------------------------------------------
 
 func _reset_runtime() -> void:
@@ -1403,6 +1578,7 @@ func _reset_runtime() -> void:
 	skipping = false
 	mode = Mode.IDLE
 	speaking.clear()
+	speech_pos.clear()
 	selected_item = ""
 	pending_choices = []
 	_in_transition = false

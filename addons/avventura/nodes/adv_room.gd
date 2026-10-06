@@ -126,6 +126,10 @@ func is_walkable(p: Vector2) -> bool:
 	return pathfinder.is_walkable(p)
 
 
+func get_regions() -> Array:
+	return nodes_of_type(self, "AdvRegion")
+
+
 ## All hotspots in the room, characters included.
 func get_hotspots() -> Array:
 	return nodes_of_type(self, "AdvHotspot")
@@ -186,6 +190,8 @@ static func _is_type(n: Node, type_name: String) -> bool:
 			return n is AdvCharacter
 		"AdvWalkArea":
 			return n is AdvWalkArea
+		"AdvRegion":
+			return n is AdvRegion
 		"Marker2D":
 			return n is Marker2D
 		"Node2D":

@@ -26,6 +26,8 @@ var vars: Array = []
 var game: Dictionary = {"title": "", "player": "", "start": "", "start_at": ""}
 ## room_id -> scene path
 var rooms: Dictionary = {}
+## Full-screen overlays (game/overlays/<id>.tscn), shown with `show ID` (like AGS GUIs).
+var overlays: Dictionary = {}
 ## Verbs used anywhere (handlers + standard ones).
 var verbs: Dictionary = {}
 ## [{file, line, level, msg}]
@@ -43,6 +45,7 @@ func load_game(dir: String) -> void:
 	characters.clear()
 	vars.clear()
 	rooms.clear()
+	overlays.clear()
 	verbs.clear()
 	issues.clear()
 	game = {"title": "", "player": "", "start": "", "start_at": ""}
@@ -50,6 +53,7 @@ func load_game(dir: String) -> void:
 		verbs[v] = true
 	_discover_rooms()
 	_discover_characters()
+	_discover_overlays()
 	var paths := find_files(game_dir, ["adv"])
 	paths.sort()
 	for path in paths:
@@ -212,6 +216,16 @@ func _discover_rooms() -> void:
 			if ResourceLoader.exists(p):
 				rooms[sub] = p
 				break
+
+
+func _discover_overlays() -> void:
+	var dir := game_dir + "/overlays"
+	if not DirAccess.dir_exists_absolute(dir):
+		return
+	for f in DirAccess.get_files_at(dir):
+		var file := f.trim_suffix(".remap")
+		if file.get_extension() in ["tscn", "scn"]:
+			overlays[file.get_basename()] = dir + "/" + file
 
 
 func _discover_characters() -> void:

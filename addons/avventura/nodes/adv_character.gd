@@ -111,12 +111,13 @@ func set_room_position(p: Vector2) -> void:
 
 ## Walks to [param target] (room coordinates). Returns true when it gets there,
 ## false when it can't reach it or it's interrupted by another walk.
-func move_to(target: Vector2) -> bool:
+## With [param anywhere] the walk areas are ignored (AGS eAnywhere).
+func move_to(target: Vector2, anywhere: bool = false) -> bool:
 	if is_walking:
 		_finish(false)
 	var room := _room()
 	var from := room_position()
-	var path := room.find_path(from, target) if room else PackedVector2Array([from, target])
+	var path := room.find_path(from, target) if room and not anywhere else PackedVector2Array([from, target])
 	if path.is_empty():
 		return false
 	if path.size() < 2 or from.distance_to(path[path.size() - 1]) < 1.0:
@@ -237,7 +238,7 @@ func stop_talking() -> void:
 
 
 func has_anim(anim: String) -> bool:
-	if _sprite and _sprite.sprite_frames and _sprite.sprite_frames.has_animation(anim):
+	if _sprite and _sprite.sprite_frames and _resolve_anim(anim) != "":
 		return true
 	var player := _anim_player()
 	return player != null and player.has_animation(anim)
@@ -250,10 +251,11 @@ func play_anim(anim: String, wait: bool = true, loop: bool = false) -> void:
 		_update_anim()
 		return
 	var player := _anim_player()
-	if _sprite and _sprite.sprite_frames and _sprite.sprite_frames.has_animation(anim):
+	var sprite_anim := _resolve_anim(anim) if _sprite and _sprite.sprite_frames else ""
+	if sprite_anim != "":
 		_custom_anim = anim
-		_sprite.play(anim)
-		if wait and not loop and not _sprite.sprite_frames.get_animation_loop(anim):
+		_sprite.play(sprite_anim)
+		if wait and not loop and not _sprite.sprite_frames.get_animation_loop(sprite_anim):
 			await _sprite.animation_finished
 			if _custom_anim == anim:
 				_custom_anim = ""
@@ -275,6 +277,32 @@ func play_anim(anim: String, wait: bool = true, loop: bool = false) -> void:
 				_custom_anim = ""
 		else:
 			get_tree().create_timer(0.6).timeout.connect(func(): if _custom_anim == anim: _custom_anim = "")
+
+
+## Name of the sprite animation for [param anim]: the animation itself, or its variant for the
+## current direction (NAME_left, NAME_side...), flipping the sprite when needed.
+func _resolve_anim(anim: String) -> String:
+	var frames := _sprite.sprite_frames
+	if frames.has_animation(anim):
+		_sprite.flip_h = false
+		return anim
+	var flip_side := not side_faces_left
+	var candidates: Array
+	match direction:
+		"left":
+			candidates = [[anim + "_left", false], [anim + "_side", flip_side], [anim + "_right", true]]
+		"right":
+			candidates = [[anim + "_right", false], [anim + "_side", not flip_side], [anim + "_left", true]]
+		"up":
+			candidates = [[anim + "_up", false]]
+		_:
+			candidates = [[anim + "_down", false]]
+	candidates.append([anim + "_down", false])
+	for c in candidates:
+		if frames.has_animation(c[0]):
+			_sprite.flip_h = c[1]
+			return c[0]
+	return ""
 
 
 func _anim_player() -> AnimationPlayer:

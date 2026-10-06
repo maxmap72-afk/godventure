@@ -41,6 +41,10 @@ game/audio/<name>.ogg      used by `sound NAME` / `music NAME`
 game/game.gd               optional GDScript whose functions AdvScript can `call`
 addons/avventura/          the engine (core/, nodes/, gui/, editor/)
 tools/adv.py, tools/adv_mcp.py   CLI and MCP server
+tools/ags/                 AGS 3.x importer: `ags_import.py game AGS_DIR` (whole project), crm.py (rooms),
+                           spr.py (sprites), agf.py (Game.agf), masks.py, ags_script.py (script translator)
+game/overlays/<id>.tscn    full-screen pictures/panels shown with `show ID` (imported AGS GUIs)
+game/gui/ags_gui.json      layout of the AGS-style interface (gui/ags_gui.tscn): icon bar + inventory window
 ```
 
 - Ids are snake_case. A hotspot's id is its `hotspot_id` or its node name in snake_case.
@@ -76,8 +80,11 @@ on look cartello:                    # handler: on VERB TARGET / on VERB ITEM on
         narrator: ...
     else:
         walk to porta                # walk [CHAR] to TARGET|X,Y [nowait]; face; anim NAME
-walk / face / anim / wait 1.5 / pickup obj [as item] / inventory add|remove item [to|from char]
-show|hide|enable|disable obj [in room] / state obj value [in room] / goto room [at entry]
+walk [char] to T|X,Y / walk [char] by DX,DY [nowait] [anywhere] / face / anim / wait 1.5
+pickup obj [as item] / inventory add|remove item [to|from char] / video name (game/video/name.ogv)
+show|hide obj [in room] [fade SECS] / enable|disable obj [in room] / state obj value [in room] / goto room [at entry|X,Y]
+on walk_onto REGION: / on walk_off REGION:   (AdvRegion nodes, like AGS regions)
+john@476,172: text   (speech at a fixed screen position, like AGS SayAt)
 place char at target / place char in room [at entry] / control char / camera follow|to|shake
 dialog name / option on|off dialog.opt / end / back / stop / call fn(args) / end_game
 cutscene: / bg: / random: / cycle: / sequence: / once: / do: / while cond:
@@ -88,7 +95,7 @@ dialog beppe:
     option faro "Il faro è spento" once|hidden|silent if COND:
         ...
 Top level: title "..", player id, start room [at entry], var x = 0,
-           item id "Name"[:  props], character id "Name"[: color/body/hair/room/at/speed/...]
+           item id "Name"[:  props], character id "Name"[: color/body/hair/room/at/pos/speed/scale/anim_speed/...]
 Expressions: and or not == != < > + - * / in; has(item) visited(room) state(obj) shown(obj)
              room() player() used(dialog.opt) room_of(char) name(id) random(a,b) chance(pct)
 Handler locals: times, first, verb, target, item. Comments: "# " (hash + space).
@@ -106,7 +113,7 @@ Full reference (Italian): `docs/GUIDA.md`.
 - `core/adv_controller.gd` – text command language (console, TCP remote, batch, tests).
 - `core/adv_linter.gd`, `adv_scaffold.gd`, `adv_pathfinder.gd` (visibility graph).
 - `nodes/` – AdvRoom, AdvHotspot, AdvCharacter (placeholder puppet), AdvWalkArea, AdvEntry.
-- `gui/` – AdvGui base, TwoClickGui (default), ScummGui; `editor/` – workspace tab, highlighter.
+- `gui/` – AdvGui base, TwoClickGui (default), ScummGui, AgsGui (icon bar + inventory window); `editor/` – workspace tab, highlighter.
 Command line flags (after `--`): `--adv-lint`, `--adv-test[=file]`, `--adv-run="cmds"`,
 `--adv-load=/--adv-save=path`, `--adv-start=room[:entry]`, `--adv-fast`, `--adv-remote[=port]`,
 `--adv-screenshot=path`, `--adv-gui=scumm|two_click`, `--adv-game-dir=res://...`, `--adv-seed=N`.

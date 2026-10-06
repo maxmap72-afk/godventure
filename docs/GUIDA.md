@@ -23,6 +23,7 @@ gioco, dal primo hotspot fino all'esportazione. Il gioco dimostrativo *Il Segret
 14. [Lavorare con Claude Code](#14-lavorare-con-claude-code)
 15. [Impostazioni del progetto](#15-impostazioni-del-progetto)
 16. [Esportare e tradurre](#16-esportare-e-tradurre)
+17. [Importare un gioco AGS](#17-importare-un-gioco-ags)
 
 ---
 
@@ -124,6 +125,11 @@ Figli tipici:
   secondo la loro Y (chi è più in basso sta davanti). Per elementi sempre in primo piano
   usa uno `z_index` positivo.
 
+- **Regioni** – nodi `AdvRegion` (poligoni invisibili sul pavimento): quando il protagonista
+  ci entra o ne esce partono `on walk_onto ID:` e `on walk_off ID:` (come i *WalksOnto* di
+  AGS). Si attivano solo quando il gioco non sta eseguendo uno script; `enable`/`disable`
+  le accendono e spengono.
+
 Eventi della stanza, nello script della stanza:
 
 ```
@@ -178,6 +184,8 @@ character beppe "Beppe":
     hair = #d9d9d9       # manichino: capelli
     skin = #f5cfa9       # manichino: pelle
     speed = 180          # pixel al secondo
+    scale = 0.65         # dimensione rispetto alla grafica (1 = originale)
+    anim_speed = 1.5     # velocità delle animazioni (1 = normale)
     height = 150         # altezza (manichino, area cliccabile, posizione del fumetto)
     room = molo          # dove si trova a inizio partita
     at = posto_beppe     # in quale punto (marker o hotspot)
@@ -275,7 +283,7 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | Istruzione | Esempio | Note |
 |---|---|---|
 | battuta | `nina: Ciao!` · `beppe(felice): "Evviva!"` | `narrator:` per il narratore; `{espressioni}` nel testo |
-| `walk` | `walk to porta` · `walk beppe to 400, 520` · `walk to barca nowait` | `nowait` non aspetta l'arrivo |
+| `walk` | `walk to porta` · `walk beppe to 400, 520` · `walk to barca nowait` · `walk beppe by 100, -20` | `nowait` non aspetta l'arrivo; `by` sposta rispetto a dove si trova; `anywhere` ignora le aree calpestabili |
 | `face` | `face left` · `face beppe nina` | left/right/up/down o un bersaglio |
 | `anim` | `anim scava` · `anim beppe balla loop` · `anim idle` | `nowait`, `loop`; `idle` ferma |
 | `wait` | `wait 1.5` | secondi |
@@ -284,11 +292,11 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | `while` | `while tentativi < 3:` | |
 | `inventory` | `inventory add chiave` · `inventory remove vermi` · `inventory add nota to beppe` | |
 | `pickup` | `pickup pala` · `pickup cassa as martello` | cammina, raccoglie, nasconde, aggiunge |
-| `show` / `hide` | `show buca` · `hide barca in molo` | hotspot, nodi, in altre stanze |
+| `show` / `hide` | `show buca` · `hide barca in molo` · `show alba fade 3` | hotspot, nodi, in altre stanze; `fade N`: dissolvenza in N secondi |
 | `enable` / `disable` | `disable porta` · `enable ponte` | interattività, aree calpestabili |
 | `state` | `state barile aperto` · `state faro acceso in spiaggia` | stato visivo salvato |
-| `goto` | `goto faro` · `goto molo at pontile` | cambia stanza |
-| `place` | `place beppe at barile` · `place beppe in faro at scala` | sposta un personaggio |
+| `goto` | `goto faro` · `goto molo at pontile` · `goto molo at 240, 350` | cambia stanza (anche in un punto preciso) |
+| `place` | `place beppe at barile` · `place beppe in faro at scala` · `place beppe in faro at 600, 500` | sposta un personaggio |
 | `control` | `control beppe` | cambia protagonista |
 | `dialog` | `dialog beppe` | apre un dialogo |
 | `option` | `option on beppe.vermi` · `option off beppe.faro` | attiva/disattiva opzioni |
@@ -301,6 +309,7 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | `once:` | blocco | solo la prima volta |
 | `do:` | blocco | raggruppa più righe (per esempio come alternativa di `random:`) |
 | `sound` / `music` | `sound porta` · `music tema` · `music stop` | file in `game/audio/` |
+| `video` | `video intro` | filmato a schermo intero da `game/video/intro.ogv`; clic o Esc lo saltano |
 | `camera` | `camera to faro 2` · `camera follow` · `camera shake 0.5` | |
 | `fade` | `fade out 1` · `fade in` | dissolvenza al nero |
 | `print` | `print monete={monete}` | messaggio di debug |
@@ -423,6 +432,17 @@ porta") e l'inventario in un pannello in basso. Clic destro esegue il verbo pred
 evidenziato nel pannello. Le stanze pensate per questa interfaccia dovrebbero lasciare
 libera la fascia bassa (circa 190 pixel), come nei giochi originali; altrimenti la
 telecamera scorre sopra il pannello. I verbi sono configurabili nella proprietà `verbs`.
+
+**Stile AGS (barra icone).** Come nei modelli di Adventure Game Studio: portando il mouse in
+cima allo schermo compare una barra di icone (inventario, salva, carica, menu); l'inventario è
+una finestra con la griglia degli oggetti, i pulsanti "seleziona" e "guarda", le frecce per
+scorrere e "Chiudi". Nelle stanze il mouse funziona come nell'interfaccia a due clic; un
+oggetto selezionato nella finestra resta in mano e si usa cliccando su qualcosa. Tasto **I**:
+apre e chiude l'inventario. Posizioni e immagini vengono da `game/gui/ags_gui.json`, scritto
+dall'importatore AGS a partire dalle GUI del gioco originale (si può modificare a mano:
+coordinate, immagini, azioni `inventory`/`save`/`load`/`menu`/`quit` della barra e
+`select`/`look`/`up`/`down`/`close` della finestra). Senza quel file usa una barra e una
+finestra semplici.
 
 Comandi comuni a tutte le interfacce:
 
@@ -614,3 +634,54 @@ escluderle nei filtri dell'esportazione.
 Godot (CSV o PO) puoi tradurre battute, nomi e opzioni usando il testo originale come
 chiave. Le scritte dell'interfaccia sono già in inglese e italiano
 (`addons/avventura/i18n/avventura.csv`); aggiungi una colonna per altre lingue.
+
+## 17. Importare un gioco AGS
+
+`tools/ags/` converte giochi fatti con Adventure Game Studio 3.x (formati 3.0–3.6). Il modo
+più semplice è importare l'intera cartella del progetto AGS in un progetto Godot nuovo
+(con dentro `addons/avventura` e `tools`):
+
+```sh
+python3 tools/ags/ags_import.py game PERCORSO/CARTELLA_AGS
+```
+
+Dalla cartella vengono letti:
+
+- `Game.agf`: titolo, risoluzione (impostata anche in `project.godot`), personaggi con
+  colore del testo, stanza e posizione iniziale, oggetti dell'inventario, variabili globali;
+- `acsprset.spr`: gli sprite. Ogni personaggio diventa una scena
+  `game/characters/<id>/<id>.tscn` con le animazioni prese dalle sue *view* (`walk_*` e
+  `idle_*` dalla view normale, `talk_*` da quella del parlato, le altre view usate da
+  `LockView` con il loro nome, es. `climb_down`); le icone vanno in `game/items/`;
+- le GUI che sono solo immagini (es. una schermata a tutto schermo) diventano *overlay* in
+  `game/overlays/<id>.tscn`, da mostrare con `show id` / `hide id`; la barra delle icone e la
+  finestra dell'inventario diventano l'interfaccia **Stile AGS** (`game/gui/ags_gui.json`,
+  capitolo 10); gli altri pannelli (salvataggi, opzioni) usano i menu del motore;
+- tutte le `roomN.crm` / `roomN.asc`, lo script globale, i video `.ogv`/`.webm` (in
+  `game/video/`) e l'audio, se i file sono nella cartella (altrimenti l'elenco finale dice
+  quali file copiare in `game/audio/` e con che nome).
+
+Si possono anche importare pezzi singoli:
+
+```sh
+# una stanza: sfondo, aree calpestabili (con i buchi), hotspot, regioni, walk-behind, oggetti, script
+python3 tools/ags/ags_import.py room PERCORSO/room1.crm --asc PERCORSO/room1.asc --player cRay
+# lo script globale (gestori di personaggi e oggetti, funzioni)
+python3 tools/ags/ags_import.py script PERCORSO/GlobalScript.asc --player cRay
+# solo l'interfaccia (barra icone + finestra dell'inventario), senza toccare stanze e script
+python3 tools/ags/ags_import.py gui PERCORSO/CARTELLA_AGS
+# solo gli sprite, come PNG
+python3 tools/ags/spr.py PERCORSO/acsprset.spr --out cartella/ [--only 26,37]
+```
+
+`--player` è il nome script del protagonista AGS. Le maschere diventano poligoni, le
+walk-behind diventano sprite ritagliati dallo sfondo e ordinati alla loro *baseline*, i
+bordi della stanza con un evento diventano regioni `edge_left`, `edge_right`... Il codice
+viene tradotto in AdvScript: `Say`, `SayAt` (`john@476,172: testo`), `Walk` (anche relativo
+e `eAnywhere`), inventario, `ChangeRoom`, `SetAsPlayer`, dialoghi, cutscene, `Wait`,
+`LockView`, `PlayVideo`, musica e suoni, GUI mostrate/nascoste, il modulo *Verbs* a 9 verbi
+(`AnyClick`, `UsedAction`, `MovePlayer`), `ActiveInventory`, `Game.DoOnceOnly`... Ciò che
+non sa tradurre resta nel file come `# TODO AGS:` con il codice originale; lo script
+originale viene copiato in `rooms/<id>/ags/`. Il controllo (lint) elenca poi i riferimenti
+ancora da sistemare. Non ancora importati: il testo dei dialoghi di `Game.agf`, i font e i
+moduli di script aggiuntivi.
