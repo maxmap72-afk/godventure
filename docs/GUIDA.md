@@ -290,7 +290,7 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | `while` | `while tentativi < 3:` | |
 | `inventory` | `inventory add chiave` · `inventory remove vermi` · `inventory add nota to beppe` | |
 | `pickup` | `pickup pala` · `pickup cassa as martello` | cammina, raccoglie, nasconde, aggiunge |
-| `show` / `hide` | `show buca` · `hide barca in molo` | hotspot, nodi, in altre stanze |
+| `show` / `hide` | `show buca` · `hide barca in molo` · `show alba fade 3` | hotspot, nodi, in altre stanze; `fade N`: dissolvenza in N secondi |
 | `enable` / `disable` | `disable porta` · `enable ponte` | interattività, aree calpestabili |
 | `state` | `state barile aperto` · `state faro acceso in spiaggia` | stato visivo salvato |
 | `goto` | `goto faro` · `goto molo at pontile` · `goto molo at 240, 350` | cambia stanza (anche in un punto preciso) |

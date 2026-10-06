@@ -990,6 +990,25 @@ func set_object_visible(obj: String, value: bool, room_id: String = "") -> void:
 	_set_object(obj, "visible", value, room_id)
 
 
+## Shows or hides an object with a dissolve of [param secs] seconds (`show obj fade 2`).
+func fade_object(obj: String, value: bool, secs: float, room_id: String = "") -> void:
+	var n := _object_node(obj) if room_id == "" or room_id == state.room else null
+	if n == null or not n is CanvasItem or fast or skipping or secs <= 0.0:
+		set_object_visible(obj, value, room_id)
+		return
+	var item := n as CanvasItem
+	var alpha := item.modulate.a if item.visible else 0.0
+	if value:
+		item.modulate.a = alpha
+		set_object_visible(obj, true, room_id)
+	var tw := create_tween()
+	tw.tween_property(item, "modulate:a", 1.0 if value else 0.0, secs)
+	await tw.finished
+	if not value:
+		set_object_visible(obj, false, room_id)
+	item.modulate.a = 1.0
+
+
 func set_object_enabled(obj: String, value: bool, room_id: String = "") -> void:
 	_set_object(obj, "enabled", value, room_id)
 

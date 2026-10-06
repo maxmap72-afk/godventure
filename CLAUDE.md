@@ -82,7 +82,7 @@ on look cartello:                    # handler: on VERB TARGET / on VERB ITEM on
         walk to porta                # walk [CHAR] to TARGET|X,Y [nowait]; face; anim NAME
 walk [char] to T|X,Y / walk [char] by DX,DY [nowait] [anywhere] / face / anim / wait 1.5
 pickup obj [as item] / inventory add|remove item [to|from char] / video name (game/video/name.ogv)
-show|hide|enable|disable obj [in room] / state obj value [in room] / goto room [at entry|X,Y]
+show|hide obj [in room] [fade SECS] / enable|disable obj [in room] / state obj value [in room] / goto room [at entry|X,Y]
 on walk_onto REGION: / on walk_off REGION:   (AdvRegion nodes, like AGS regions)
 john@476,172: text   (speech at a fixed screen position, like AGS SayAt)
 place char at target / place char in room [at entry] / control char / camera follow|to|shake

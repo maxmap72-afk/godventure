@@ -23,6 +23,7 @@ func _init() -> void:
 	test_parser()
 	test_parser_errors()
 	test_parser_say_at()
+	test_parser_fade()
 	test_pathfinder()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -122,6 +123,15 @@ func test_parser_say_at() -> void:
 	var b: Array = p.handlers[0].body
 	check(b[0].k == "say" and b[0].who == "nina" and b[0].at == Vector2(586, 60) and b[0].text == "Over here", "say at a fixed position")
 	check(b[1].at == null and b[1].mood == "sad", "plain say has no position")
+
+
+func test_parser_fade() -> void:
+	var p := AdvParser.parse("on enter:\n    show alba fade 2.5\n    hide luna\n    show x in b\n", "res://t.adv")
+	check(p.errors.is_empty(), "show fade parses: %s" % str(p.errors))
+	var b: Array = p.handlers[0].body
+	check(b[0].obj == "alba" and is_equal_approx(b[0].fade, 2.5), "show OBJ fade SECONDS")
+	check(b[1].obj == "luna" and b[1].fade == 0.0, "hide without fade")
+	check(b[2].obj == "x" and b[2].room == "b", "show in room still works")
 
 
 func test_parser_errors() -> void:

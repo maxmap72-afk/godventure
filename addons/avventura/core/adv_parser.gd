@@ -459,6 +459,11 @@ func _parse_stmt(node: Dictionary) -> Variant:
 				return _bad(line, "write 'pickup OBJECT' or 'pickup OBJECT as ITEM'")
 			return st
 		"show", "hide", "enable", "disable":
+			# show OBJ fade 2: dissolve in 2 seconds
+			st.fade = 0.0
+			if word in ["show", "hide"] and w.size() >= 3 and w[w.size() - 2] == "fade" and w[w.size() - 1].is_valid_float():
+				st.fade = w[w.size() - 1].to_float()
+				w = w.slice(0, w.size() - 2)
 			if w.size() == 1:
 				st.obj = w[0]
 				st.room = ""
@@ -466,7 +471,7 @@ func _parse_stmt(node: Dictionary) -> Variant:
 				st.obj = w[0]
 				st.room = w[2]
 			else:
-				return _bad(line, "write '%s OBJECT' or '%s OBJECT in ROOM'" % [word, word])
+				return _bad(line, "write '%s OBJECT' or '%s OBJECT in ROOM' (show/hide: optional 'fade SECONDS')" % [word, word])
 			return st
 		"state":
 			if w.size() == 2:

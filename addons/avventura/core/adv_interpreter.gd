@@ -151,7 +151,10 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 		"pickup":
 			await adv.pickup(st.obj, st.item)
 		"show", "hide":
-			adv.set_object_visible(st.obj, st.k == "show", st.room)
+			if st.get("fade", 0.0) > 0.0:
+				await adv.fade_object(st.obj, st.k == "show", st.fade, st.room)
+			else:
+				adv.set_object_visible(st.obj, st.k == "show", st.room)
 		"enable", "disable":
 			adv.set_object_enabled(st.obj, st.k == "enable", st.room)
 		"state":
