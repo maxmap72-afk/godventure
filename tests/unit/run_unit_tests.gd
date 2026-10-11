@@ -25,6 +25,7 @@ func _init() -> void:
 	test_parser_say_at()
 	test_parser_fade()
 	test_pathfinder()
+	test_walk_behind()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -178,3 +179,38 @@ func test_pathfinder() -> void:
 	pf.build([u], [])
 	var up := pf.find_path(Vector2(50, 50), Vector2(350, 50))
 	check(up.size() >= 4, "U-shaped path goes down and up (%s)" % str(up))
+
+
+func test_walk_behind() -> void:
+	var room := Node2D.new()
+	var bg := Sprite2D.new()
+	bg.name = "Background"
+	bg.centered = false
+	var img := Image.create(64, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	bg.texture = ImageTexture.create_from_image(img)
+	room.add_child(bg)
+	# polygon: moved down to its lowest point, drawn in the same place, uv = background pixels
+	var wb := AdvWalkBehind.new()
+	wb.polygon = PackedVector2Array([Vector2(10, 4), Vector2(30, 4), Vector2(30, 20), Vector2(10, 20)])
+	room.add_child(wb)
+	# mask: its opaque pixels, sorted at the given baseline
+	var mimg := Image.create(64, 32, false, Image.FORMAT_RGBA8)
+	mimg.fill_rect(Rect2i(40, 2, 4, 10), Color.WHITE)
+	var wm := AdvWalkBehind.new()
+	wm.mask = ImageTexture.create_from_image(mimg)
+	wm.baseline = 25.0
+	room.add_child(wm)
+	get_root().add_child(room)
+	wb.build()   # the tree isn't running yet: _ready comes later (and then does nothing)
+	wm.build()
+	check(is_equal_approx(wb.position.y, 20.0), "walk-behind sorts at its lowest point (%s)" % wb.position)
+	check(wb.polygon[0] + wb.position == Vector2(10, 4), "walk-behind is drawn where it was")
+	check(wb.uv.size() == 4 and wb.uv[0] == Vector2(10, 4), "walk-behind uv = background pixels")
+	check(wb.texture == bg.texture and wb.color == Color.WHITE, "walk-behind shows the background")
+	check(is_equal_approx(wm.position.y, 25.0), "mask walk-behind sorts at its baseline")
+	var cut := wm.texture.get_image()
+	check(cut.get_pixel(41, 5).a > 0.9 and cut.get_pixel(41, 5).r > 0.9, "mask keeps the background under it")
+	check(cut.get_pixel(20, 5).a < 0.1, "mask drops the rest of the background")
+	check(wm.polygon[0] + wm.position == Vector2(40, 2), "mask walk-behind covers the mask's used rect")
+	room.queue_free()

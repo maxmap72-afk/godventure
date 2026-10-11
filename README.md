@@ -18,6 +18,10 @@ italiano, **Il Segreto del Faro** (`game/`), da giocare e da usare come esempio.
   sotto-dialoghi.
 - **Stanze come scene Godot**: sfondo, aree calpestabili con ostacoli e percorso più breve,
   prospettiva, hotspot con forme poligonali, punti d'ingresso, telecamera che segue.
+- **Walk-behind come in AGS**: pezzi dello sfondo (colonne, ringhiere, sedili) che coprono
+  i personaggi quando passano dietro, definiti con un poligono o con una maschera.
+- **Presentazione curata**: musica del menu iniziale, schermata d'avvio (es. un disclaimer),
+  font del gioco anche pixel-art senza sfocature, menu "Scegli scena" per partire da un capitolo.
 - **Zero codice per le cose semplici**: descrizione, oggetto da raccogliere e uscita si
   impostano dall'ispettore.
 - **Si prototipa senza grafica**: i personaggi senza sprite sono manichini animati disegnati

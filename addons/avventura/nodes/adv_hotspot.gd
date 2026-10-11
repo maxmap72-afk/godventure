@@ -44,6 +44,9 @@ signal state_changed(state: String)
 @export var click_priority := 0
 ## Use the sprite's opaque pixels as the clickable shape.
 @export var pixel_perfect := false
+## With [member pixel_perfect] on an AnimatedSprite2D: how close (texture pixels) to the
+## drawn figure a click still counts.
+@export var pick_margin := 0
 
 var state := ""
 
@@ -128,8 +131,10 @@ func contains_point(global_point: Vector2) -> bool:
 				return true
 	if has_shape:
 		return false
+	var has_sprite := false
 	for c in get_children():
 		if (c is Sprite2D or c is AnimatedSprite2D) and c.visible:
+			has_sprite = true
 			var lp: Vector2 = c.to_local(global_point)
 			var rect := sprite_rect(c)
 			if rect.has_point(lp):
@@ -137,8 +142,10 @@ func contains_point(global_point: Vector2) -> bool:
 					return true
 				if c is Sprite2D and c.is_pixel_opaque(lp):
 					return true
-				if c is AnimatedSprite2D and _frame_opaque(c, lp - rect.position):
+				if c is AnimatedSprite2D and _frame_opaque(c, lp - rect.position, pick_margin):
 					return true
+	if has_sprite:
+		return false
 	return _fallback_rect().has_point(to_local(global_point))
 
 
@@ -146,7 +153,8 @@ static var _alpha_cache: Dictionary = {}
 
 
 ## Is the pixel [param p] (from the frame's top-left corner) of the current frame opaque?
-static func _frame_opaque(s: AnimatedSprite2D, p: Vector2) -> bool:
+## [param margin] (texture pixels) also accepts points that close to an opaque pixel.
+static func _frame_opaque(s: AnimatedSprite2D, p: Vector2, margin: int = 0) -> bool:
 	var tex: Texture2D = s.sprite_frames.get_frame_texture(s.animation, s.frame)
 	if tex == null:
 		return false
@@ -164,9 +172,16 @@ static func _frame_opaque(s: AnimatedSprite2D, p: Vector2) -> bool:
 		x = img.get_width() - 1 - x
 	if s.flip_v:
 		y = img.get_height() - 1 - y
-	if x < 0 or y < 0 or x >= img.get_width() or y >= img.get_height():
-		return false
-	return img.get_pixel(x, y).a > 0.1
+	var w := img.get_width()
+	var h := img.get_height()
+	var step := maxi(1, margin / 2)
+	for dy in range(-margin, margin + 1, step):
+		for dx in range(-margin, margin + 1, step):
+			var px := x + dx
+			var py := y + dy
+			if px >= 0 and py >= 0 and px < w and py < h and img.get_pixel(px, py).a > 0.1:
+				return true
+	return false
 
 
 ## Area used when there is no shape and no sprite (overridden by characters).

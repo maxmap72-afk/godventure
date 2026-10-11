@@ -25,7 +25,9 @@ python3 tools/adv.py import                      # after adding/changing art
 
 Definition of done for any content change: **lint has 0 errors and tests pass**. When you
 add or change a puzzle, extend `game/tests/walkthrough.advtest` (or add a new `.advtest`)
-so the whole game stays solvable. Engine changes: also run the engine fixtures with
+so the whole game stays solvable. The walkthrough's `checkpoint ID Title` lines also
+regenerate `game/scene/*.json` (the title menu's "Scegli scena" chapter starts): add one when a
+new room is reached. Engine changes: also run the engine fixtures with
 `godot --headless --path . -- --adv-game-dir=res://tests/fixture --adv-test`.
 
 ## Layout and conventions
@@ -37,7 +39,7 @@ game/items.adv             item declarations; icons in game/items/<id>.svg|png
 game/rooms/<id>/<id>.tscn  room scene (root AdvRoom); script <id>.adv next to it
 game/characters/<id>/<id>.tscn   optional character scene (AnimatedSprite2D); otherwise a placeholder puppet
 game/tests/*.advtest       walkthrough tests (console commands + `expect`)
-game/audio/<name>.ogg      used by `sound NAME` / `music NAME`
+game/audio/<name>.ogg      used by `sound NAME` / `music NAME`; `menu.*` loops on the title screen
 game/game.gd               optional GDScript whose functions AdvScript can `call`
 addons/avventura/          the engine (core/, nodes/, gui/, editor/)
 tools/adv.py, tools/adv_mcp.py   CLI and MCP server
@@ -45,6 +47,8 @@ tools/ags/                 AGS 3.x importer: `ags_import.py game AGS_DIR` (whole
                            spr.py (sprites), agf.py (Game.agf), masks.py, ags_script.py (script translator)
 game/overlays/<id>.tscn    full-screen pictures/panels shown with `show ID` (imported AGS GUIs)
 game/gui/ags_gui.json      layout of the AGS-style interface (gui/ags_gui.tscn): icon bar + inventory window
+game/gui/font.ttf          optional game font (pixel fonts stay crisp: no antialiasing)
+game/overlays/splash.tscn  optional splash (e.g. a disclaimer) shown before the title menu
 ```
 
 - Ids are snake_case. A hotspot's id is its `hotspot_id` or its node name in snake_case.
@@ -65,6 +69,9 @@ property of a node, then exported properties. Useful node types:
 - `AdvWalkArea` (Polygon2D) with `polygon = PackedVector2Array(x1, y1, x2, y2, ...)`; child
   Polygon2D nodes are obstacles.
 - `AdvHotspot` (Area2D) + child `CollisionPolygon2D` (click shape) and optional `WalkTo` Marker2D.
+- `AdvWalkBehind` (Polygon2D) – AGS walk-behind: the background under its `polygon` (or the opaque
+  pixels of `mask`, an image the size of the background) is drawn over characters whose feet are
+  above `baseline` (0 = lowest point). Direct child of the room.
 - `AdvCharacter` (Area2D) for NPCs fixed in one room; engine-managed characters are declared
   in characters.adv with `room = ...` and `at = MARKER` instead.
 After editing scenes restart the play session (`adventure_play` with `restart: true`).
@@ -112,7 +119,7 @@ Full reference (Italian): `docs/GUIDA.md`.
 - `core/adv_registry.gd` – loads all `.adv`, handler lookup; `adv_state.gd` – saved state.
 - `core/adv_controller.gd` – text command language (console, TCP remote, batch, tests).
 - `core/adv_linter.gd`, `adv_scaffold.gd`, `adv_pathfinder.gd` (visibility graph).
-- `nodes/` – AdvRoom, AdvHotspot, AdvCharacter (placeholder puppet), AdvWalkArea, AdvEntry.
+- `nodes/` – AdvRoom, AdvHotspot, AdvCharacter (placeholder puppet), AdvWalkArea, AdvWalkBehind, AdvEntry.
 - `gui/` – AdvGui base, TwoClickGui (default), ScummGui, AgsGui (icon bar + inventory window); `editor/` – workspace tab, highlighter.
 Command line flags (after `--`): `--adv-lint`, `--adv-test[=file]`, `--adv-run="cmds"`,
 `--adv-load=/--adv-save=path`, `--adv-start=room[:entry]`, `--adv-fast`, `--adv-remote[=port]`,

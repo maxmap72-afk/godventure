@@ -15,6 +15,19 @@ extends AdvGui
 @export var verb_hot_color := Color(0.75, 1.0, 0.7)
 @export var panel_bg := Color(0.03, 0.03, 0.06, 1.0)
 
+@export_group("Custom look")
+## Background of the whole bar (for example a StyleBoxTexture); empty = flat panel_bg.
+@export var bar_style: StyleBox
+## Verb and arrow buttons; empty = text only.
+@export var verb_style: StyleBox
+@export var verb_style_hover: StyleBox
+@export var verb_style_pressed: StyleBox
+## Picture under each inventory slot; empty = rounded dark square.
+@export var slot_texture: Texture2D
+@export var verb_font_size := 24
+@export var sentence_font_size := 22
+@export var sentence_color := Color(0.75, 0.85, 1.0)
+
 const VERB_LABELS := {"walk": "Walk to", "give": "Give", "pick": "Pick up", "use": "Use", "open": "Open",
 	"look": "Look at", "push": "Push", "close": "Close", "talk": "Talk to", "pull": "Pull"}
 
@@ -32,9 +45,12 @@ var _slots: Array = []
 func _build() -> void:
 	Adv.gui_bottom_margin = panel_height
 	panel = PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = panel_bg
-	sb.set_content_margin_all(8)
+	var sb: StyleBox = bar_style
+	if sb == null:
+		var flat := StyleBoxFlat.new()
+		flat.bg_color = panel_bg
+		flat.set_content_margin_all(8)
+		sb = flat
 	panel.add_theme_stylebox_override("panel", sb)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_top = -panel_height
@@ -42,8 +58,8 @@ func _build() -> void:
 	var vb := VBoxContainer.new()
 	sentence = Label.new()
 	sentence.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sentence.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
-	sentence.add_theme_font_size_override("font_size", 22)
+	sentence.add_theme_color_override("font_color", sentence_color)
+	sentence.add_theme_font_size_override("font_size", sentence_font_size)
 	vb.add_child(sentence)
 	var hb := HBoxContainer.new()
 	hb.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -64,9 +80,9 @@ func _build() -> void:
 			var v: String = verbs[i]
 			var b := Button.new()
 			b.text = tr(VERB_LABELS.get(v, v.capitalize()))
-			b.flat = true
+			_style_button(b)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.add_theme_font_size_override("font_size", 24)
+			b.add_theme_font_size_override("font_size", verb_font_size)
 			b.add_theme_color_override("font_color", verb_color)
 			b.add_theme_color_override("font_hover_color", verb_hot_color)
 			b.pressed.connect(_on_verb.bind(v))
@@ -79,6 +95,10 @@ func _build() -> void:
 		var a := Button.new()
 		a.text = "▲" if d < 0 else "▼"
 		a.custom_minimum_size = Vector2(44, 52)
+		if verb_style:
+			_style_button(a)
+			a.add_theme_color_override("font_color", verb_color)
+			a.add_theme_color_override("font_hover_color", verb_hot_color)
 		a.pressed.connect(func():
 			inv_offset = clampi(inv_offset + d * 4, 0, maxi(0, ((Adv.player_items().size() - 1) / 4) * 4 - 4))
 			refresh_inventory())
@@ -90,6 +110,7 @@ func _build() -> void:
 	inv_grid.add_theme_constant_override("v_separation", 6)
 	for i in 8:
 		var s := AdvItemSlot.new(66.0)
+		s.slot_texture = slot_texture
 		s.clicked.connect(click_item)
 		s.hovered.connect(func(it, inside): hovered_item = it if inside else "")
 		inv_grid.add_child(s)
@@ -102,6 +123,24 @@ func _build() -> void:
 	Adv.room_entered.connect(func(_r): refresh_inventory())
 	Adv.player_changed.connect(func(_c): refresh_inventory())
 	refresh_inventory()
+
+
+## Verb buttons: the custom styles if set, otherwise flat text with a small margin
+## (the theme's button margin would make the bar taller than panel_height).
+func _style_button(b: Button) -> void:
+	if verb_style == null:
+		b.flat = true
+		var e := StyleBoxEmpty.new()
+		e.content_margin_top = 2
+		e.content_margin_bottom = 2
+		for st in ["normal", "hover", "pressed", "focus", "disabled"]:
+			b.add_theme_stylebox_override(st, e)
+		return
+	b.add_theme_stylebox_override("normal", verb_style)
+	b.add_theme_stylebox_override("hover", verb_style_hover if verb_style_hover else verb_style)
+	b.add_theme_stylebox_override("pressed", verb_style_pressed if verb_style_pressed else verb_style)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.add_theme_stylebox_override("disabled", verb_style)
 
 
 func refresh_inventory() -> void:

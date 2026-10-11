@@ -56,7 +56,9 @@ game/
   rooms/<id>/<id>.tscn       scena della stanza
   rooms/<id>/<id>.adv        script della stanza (vale solo lì)
   characters/<id>/<id>.tscn  scena del personaggio (facoltativa)
-  audio/<nome>.ogg|wav|mp3   suoni e musiche
+  audio/<nome>.ogg|wav|mp3   suoni e musiche (audio/menu.* suona in loop sul menu iniziale)
+  overlays/splash.tscn       se c'è, viene mostrata su nero prima del menu iniziale (metadata "seconds", default 5)
+  gui/font.ttf|otf|fnt       carattere del gioco (per esempio un font pixel: viene usato senza antialiasing)
   tests/*.advtest            soluzioni automatiche (test)
   title.svg|png              sfondo del menu iniziale (facoltativo)
   game.gd                    funzioni GDScript richiamabili dagli script (facoltativo)
@@ -124,6 +126,15 @@ Figli tipici:
 - **Hotspot e personaggi** – come figli diretti della stanza vengono ordinati in profondità
   secondo la loro Y (chi è più in basso sta davanti). Per elementi sempre in primo piano
   usa uno `z_index` positivo.
+- **Walk-behind** – nodi `AdvWalkBehind` (come le *walk-behind area* di AGS): un pezzo dello
+  sfondo (una colonna, una balaustra, lo schienale di un sedile) che viene ridisegnato sopra i
+  personaggi che stanno *dietro*. Il pezzo è il poligono (si disegna sopra lo sfondo con
+  l'editor dei poligoni) oppure i pixel opachi di `mask`, un'immagine grande come lo sfondo e
+  trasparente altrove (comoda per forme sottili come corde e ringhiere). `baseline` è la Y
+  della stanza che divide davanti e dietro: chi ha i piedi più in alto passa dietro, chi li ha
+  più in basso davanti (0 = il punto più basso del poligono o della maschera). Va messo come
+  figlio diretto della stanza; `show`/`hide` lo accendono e spengono. Se il pezzo poggia sul
+  pavimento, togli la sua impronta dall'area calpestabile, così nessuno ci cammina dentro.
 
 - **Regioni** – nodi `AdvRegion` (poligoni invisibili sul pavimento): quando il protagonista
   ci entra o ne esce partono `on walk_onto ID:` e `on walk_off ID:` (come i *WalksOnto* di
@@ -205,7 +216,13 @@ parla, raccoglie): si può finire un gioco intero prima di disegnare. Per la gra
 | `walk_down`, `walk_up`, `walk_side` | cammina |
 | `talk_down`, `talk_side`, ... | parla (`talk_felice` per `beppe(felice): ...`) |
 | `idle_left` / `idle_right` ecc. | alternative a `side`, se le hai disegnate |
+| `fidget_down`, `fidget_side`, `fidget2_*`, `fidget3_*` | gesti a riposo (non in loop): ogni 5-11 secondi un personaggio fermo ne recita uno a caso; `fidgets = false` nel nodo li spegne |
 | qualunque altro nome | `anim beppe balla` |
+
+**Ombra.** I personaggi con sprite proiettano sul pavimento un'ombra morbida sotto i piedi,
+che segue la prospettiva della stanza. Nella scena del personaggio si regola con `shadow`
+(accesa/spenta), `shadow_opacity` e `shadow_offset` (spostamento verso destra, per una luce
+che viene da sinistra).
 
 Se manca una variante il motore ripiega su quella più vicina (`walk_left` → `walk_side`
 specchiata → `walk_down` → `walk` → `idle`). Per l'animazione di raccolta usa `pickup`.
@@ -471,6 +488,22 @@ salvare quando il gioco aspetta il giocatore (non durante script o cutscene). Il
 JSON leggibile in `user://saves/` e contiene variabili, inventari, stanza, posizioni dei
 personaggi, stati degli oggetti, opzioni dei dialoghi e contatori (`times`, `cycle`...).
 Dopo un caricamento viene eseguito `on setup` della stanza, non `on enter`.
+
+### Scegli scena (partire da un punto della storia)
+
+Nei test di soluzione, il comando `checkpoint ID Titolo` salva lo stato del gioco al momento
+dell'ultimo ingresso in una stanza (prima del suo `on enter`) in `game/scene/ID.json`:
+
+```
+use vetrata
+expect room() == "auto"
+checkpoint 02_auto Shanghai - La fuga sulla Duesenberg
+```
+
+Se la cartella `scene/` contiene questi file, il menu iniziale mostra **Scegli scena**: scegliendo
+un titolo si riparte da lì, con oggetti, variabili e personaggi esattamente come in una partita
+vera, e l'ingresso della stanza (la sua scena iniziale) viene rieseguito. I file si rigenerano
+ogni volta che si lanciano i test; dalla console si prova con `chapter ID`.
 
 ## 12. GDScript: quando serve più potenza
 

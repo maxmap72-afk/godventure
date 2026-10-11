@@ -41,6 +41,9 @@ var _history_i := 0
 var _menu_center: CenterContainer
 var _title_bg: Control
 var _title_label: Label
+## True when the game provides its own title picture (game/title.png...): the picture is
+## expected to contain the title, so the text label is not drawn over it.
+var _title_image := false
 var _toast_tween: Tween
 var _in_menu := false
 var _dim: ColorRect
@@ -56,7 +59,10 @@ func _ready() -> void:
 	root.name = "Root"
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_load_game_font()
 	root.theme = gui_theme if gui_theme else make_theme()
+	if game_font and root.theme.default_font == null:
+		root.theme.default_font = game_font
 	add_child(root)
 	_build()  # interface-specific widgets first, so speech and menus are drawn above them
 	_build_common()
@@ -70,6 +76,32 @@ func _ready() -> void:
 	Adv.notify.connect(show_toast)
 	Adv.item_selected.connect(func(_i): item_cursor.queue_redraw())
 	Adv.game_started.connect(func(): _close_all_menus())
+
+
+## The game's own font (game/gui/font.ttf|otf|fnt), or null for Godot's default.
+var game_font: Font
+
+
+## Loads game/gui/font.*: a pixel font stays crisp without antialiasing, like in the LucasArts
+## games. It also becomes Godot's fallback font, so mini-games and anything that draws its own
+## text use it too.
+func _load_game_font() -> void:
+	for ext in ["ttf", "otf", "fnt", "tres"]:
+		var path := "%s/gui/font.%s" % [Adv.game_dir, ext]
+		if not ResourceLoader.exists(path):
+			continue
+		var f = load(path)
+		if f is FontFile:
+			f.antialiasing = TextServer.FONT_ANTIALIASING_NONE
+			f.hinting = TextServer.HINTING_NONE
+			f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		if f is Font:
+			game_font = f
+			ThemeDB.fallback_font = f
+			ThemeDB.get_default_theme().default_font = f
+			if ThemeDB.get_project_theme():
+				ThemeDB.get_project_theme().default_font = f
+		return
 
 
 ## Subclasses add their widgets here.
@@ -491,24 +523,53 @@ func open_menu(title: String, entries: Array) -> VBoxContainer:
 	_in_menu = true
 	menu_layer.visible = true
 	_dim.color.a = 0.12 if title_mode else 0.55
-	_menu_center.offset_top = 170.0 if title_mode else 0.0
+	# Over a title picture the menu sits in the lower-left corner, so the picture stays visible.
+	var corner := title_mode and _title_image
+	_menu_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	if corner:
+		_menu_center.anchor_right = 0.36
+		_menu_center.anchor_top = 0.4
+		_dim.color.a = 0.0
+	_menu_center.offset_left = 0.0
+	_menu_center.offset_right = 0.0
+	_menu_center.offset_bottom = 0.0
+	_menu_center.offset_top = 0.0 if corner else (170.0 if title_mode else 0.0)
 	for c in _menu_center.get_children():
 		c.queue_free()
 	var panel := PanelContainer.new()
+	if corner:
+		var sb := root.theme.get_stylebox("panel", "PanelContainer").duplicate() as StyleBoxFlat if root and root.theme else null
+		if sb:
+			sb.bg_color = Color(panel_color, 0.55)
+			panel.add_theme_stylebox_override("panel", sb)
+	var gap := 6 if corner else 10
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", gap)
+	panel.add_child(outer)
 	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 10)
-	panel.add_child(vb)
+	vb.add_theme_constant_override("separation", gap)
 	if title != "":
 		var tl := Label.new()
 		tl.text = title
 		tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		tl.add_theme_font_size_override("font_size", font_size + 6)
 		tl.add_theme_color_override("font_color", accent_color)
-		vb.add_child(tl)
+		outer.add_child(tl)
+	# Long lists (e.g. chapter starts) scroll instead of running off the screen.
+	var max_h := get_viewport().get_visible_rect().size.y * (0.46 if corner else 0.7)
+	if entries.size() * (font_size + 26 + gap) > max_h:
+		var sc := ScrollContainer.new()
+		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		sc.follow_focus = true
+		sc.custom_minimum_size = Vector2(0, max_h)
+		sc.add_child(vb)
+		outer.add_child(sc)
+	else:
+		outer.add_child(vb)
 	for e in entries:
 		var b := Button.new()
 		b.text = e[0]
-		b.custom_minimum_size = Vector2(360, 0)
+		b.custom_minimum_size = Vector2(260 if corner else 360, 0)
 		if e[1] == null:
 			b.disabled = true
 		else:
@@ -530,13 +591,45 @@ func _close_all_menus() -> void:
 	get_tree().paused = false
 
 
+## Before the title menu at startup: game/overlays/splash.tscn (a disclaimer, a logo...) over a
+## black screen for a few seconds (meta "seconds" on its root, default 5), fading in and out.
+func show_splash() -> void:
+	var path: String = Adv.registry.overlays.get("splash", "")
+	if path == "" or DisplayServer.get_name() == "headless":
+		return
+	var scene := load(path) as PackedScene
+	if scene == null:
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 120
+	var black := ColorRect.new()
+	black.color = Color.BLACK
+	black.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(black)
+	var node := scene.instantiate()
+	layer.add_child(node)
+	add_child(layer)
+	var secs := float(node.get_meta("seconds", 5.0))
+	if node is CanvasItem:
+		node.modulate.a = 0.0
+		var t := create_tween()
+		t.tween_property(node, "modulate:a", 1.0, 0.5)
+		t.tween_interval(maxf(secs - 1.0, 0.0))
+		t.tween_property(node, "modulate:a", 0.0, 0.5)
+		await t.finished
+	else:
+		await get_tree().create_timer(secs).timeout
+	layer.queue_free()
+
+
 func show_title() -> void:
 	title_mode = true
 	_title_bg.visible = true
-	_title_label.visible = true
+	_title_label.visible = not _title_image
 	_title_label.text = Adv.registry.game.title if Adv.registry.game.title != "" else str(ProjectSettings.get_setting("application/config/name"))
 	get_tree().paused = false
 	Adv.fade(false, 0.0)
+	Adv.play_title_music()
 	var saves := Adv.list_saves()
 	var entries := [[tr("New game"), func():
 		_close_all_menus()
@@ -546,6 +639,8 @@ func show_title() -> void:
 			_close_all_menus()
 			Adv.load_game(saves[0].slot)])
 		entries.append([tr("Load"), show_load_menu])
+	if not Adv.list_chapters().is_empty():
+		entries.append([tr("Chapters"), show_chapters_menu])
 	entries.append([tr("Settings"), show_settings])
 	if not OS.has_feature("web"):
 		entries.append([tr("Quit"), func(): get_tree().quit()])
@@ -587,6 +682,18 @@ func show_save_menu() -> void:
 			_close_all_menus()])
 	entries.append([tr("Back"), _back])
 	open_menu(tr("Save"), entries)
+
+
+## Starts the game from one of the chapter starts recorded by the walkthrough.
+func show_chapters_menu() -> void:
+	var entries := []
+	for c in Adv.list_chapters():
+		var path: String = c.path
+		entries.append([c.title, func():
+			_close_all_menus()
+			Adv.load_chapter(path)])
+	entries.append([tr("Back"), _back])
+	open_menu(tr("Chapters"), entries)
 
 
 func show_load_menu() -> void:
@@ -682,6 +789,7 @@ func _make_title_background() -> Control:
 			tr_.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tr_.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 			tr_.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_title_image = true
 			return tr_
 	var g := Gradient.new()
 	g.set_color(0, Color(0.12, 0.13, 0.3))

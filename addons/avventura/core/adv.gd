@@ -82,6 +82,8 @@ var pending_choices: Array = []
 var args: Dictionary = {}
 ## Where save slots live (tests use their own folder, so they never touch the player's saves).
 var save_dir := "user://saves"
+## Game state at the last arrival in a room, before its `on enter` ran (for chapter starts).
+var arrival_snapshot: Dictionary = {}
 ## Player preferences (user://settings.cfg).
 var prefs := {"text_speed": 1.0, "auto_advance": true, "music_volume": 0.8, "sfx_volume": 1.0, "fullscreen": false}
 
@@ -181,6 +183,7 @@ func boot(main: Node) -> void:
 	elif args.has("start") or gui == null or not setting("avventura/gui/show_title_menu"):
 		await new_game(str(args.get("start", "")))
 	else:
+		await gui.show_splash()
 		gui.show_title()
 	if args.has("screenshot"):
 		await controller.cli_screenshot(str(args.screenshot))
@@ -277,6 +280,7 @@ func _process(delta: float) -> void:
 
 ## Starts a new game. [param start] can be "room" or "room:entry" to begin elsewhere.
 func new_game(start: String = "") -> void:
+	_stop_title_music()
 	_reset_runtime()
 	state = AdvState.new()
 	game_over = false
@@ -384,6 +388,8 @@ func _enter_room(room_id: String, at: String, how: String, pos: Variant = null) 
 	_in_transition = false
 	room_entered.emit(room_id)
 	if how == "goto":
+		_store_characters()
+		arrival_snapshot = state.to_dict()
 		await _room_event("enter")
 
 
@@ -1315,6 +1321,23 @@ func is_playing_video() -> bool:
 	return _playing_video
 
 
+## Title-screen music: an audio file named like one of these (game/audio/menu.mp3...).
+const TITLE_MUSIC := ["menu", "title", "titolo"]
+
+
+## Plays the title-screen music, if the game has one. It stops when a game starts or is loaded.
+func play_title_music() -> void:
+	for n in TITLE_MUSIC:
+		if _audio(n) != null:
+			play_music(n)
+			return
+
+
+func _stop_title_music() -> void:
+	if _music_name in TITLE_MUSIC:
+		stop_music()
+
+
 func stop_music() -> void:
 	_music_name = ""
 	if _music:
@@ -1503,6 +1526,7 @@ func save_game(slot: String) -> bool:
 
 
 func load_game(slot: String) -> bool:
+	_stop_title_music()
 	var path := save_path(slot)
 	if not FileAccess.file_exists(path):
 		script_error("save file not found: %s" % path)
@@ -1518,6 +1542,55 @@ func load_game(slot: String) -> bool:
 	await _enter_room(state.room, "", "load")
 	_set_busy(false)
 	log_line("[loaded] %s" % path)
+	return true
+
+
+## Chapter starts: saves in GAME_DIR/scene/*.json made by the walkthrough with `checkpoint`.
+func chapters_dir() -> String:
+	return game_dir + "/scene"
+
+
+## Chapter starts, sorted by file name: [{path, title}].
+func list_chapters() -> Array:
+	var out := []
+	var dir := chapters_dir()
+	if not DirAccess.dir_exists_absolute(dir):
+		return out
+	var files := Array(DirAccess.get_files_at(dir))
+	files.sort()
+	for f in files:
+		if f.get_extension() != "json":
+			continue
+		var data = JSON.parse_string(FileAccess.get_file_as_string(dir + "/" + f))
+		if data is Dictionary:
+			out.append({"path": dir + "/" + f, "title": str(data.get("meta", {}).get("chapter", f.get_basename()))})
+	return out
+
+
+## Saves the state of the last room arrival as a chapter start (`checkpoint` command).
+func save_chapter(id: String, title: String) -> bool:
+	if arrival_snapshot.is_empty():
+		script_error("checkpoint: no room arrival to save yet")
+		return false
+	var data := arrival_snapshot.duplicate(true)
+	data["meta"] = {"title": registry.game.title, "chapter": title, "engine": VERSION}
+	var path := chapters_dir() + "/" + id + ".json"
+	DirAccess.make_dir_recursive_absolute(chapters_dir())
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		script_error("cannot write chapter file %s" % path)
+		return false
+	f.store_string(JSON.stringify(data, "  "))
+	f.close()
+	log_line("[chapter] %s" % path)
+	return true
+
+
+## Starts playing from a chapter: loads its state and replays the room's arrival.
+func load_chapter(path: String) -> bool:
+	if not await load_game(path):
+		return false
+	await _room_event("enter")
 	return true
 
 

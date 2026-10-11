@@ -24,10 +24,12 @@ Change (debug):
   new [ROOM] | save SLOT | load SLOT | reload | fast on|off
   click X Y | rclick X Y      simulate mouse clicks (room coordinates)
   gui show_pause|show_save_menu|show_settings|toggle_console|close   open interface panels
+  checkpoint ID TITLE         save the last room arrival as a chapter start (GAME_DIR/scene)
+  chapter ID                  start playing from a chapter start
   screenshot [PATH] | lint | record PATH|stop | wait SECONDS | quit"""
 
 const COMMANDS := ["help", "do", "choose", "skip", "scene", "state", "inv", "inventory", "vars", "get",
-	"eval", "expect", "set", "item", "goto", "run", "new", "save", "load", "reload", "fast", "click",
+	"eval", "expect", "set", "item", "goto", "run", "new", "save", "checkpoint", "chapter", "load", "reload", "fast", "click",
 	"rclick", "gui", "screenshot", "lint", "record", "wait", "quit"]
 
 var adv: Node
@@ -118,6 +120,19 @@ func execute(line: String) -> Dictionary:
 			settle = true
 		"save":
 			ok = adv.save_game(rest if rest != "" else "quicksave")
+		"checkpoint":
+			var parts := rest.split(" ", false, 1)
+			if parts.is_empty():
+				_print("write: checkpoint ID Title of the scene")
+				ok = false
+			else:
+				ok = adv.save_chapter(parts[0], parts[1] if parts.size() > 1 else parts[0])
+		"chapter":
+			var cpath: String = rest if rest.contains("/") else adv.chapters_dir() + "/" + rest + ".json"
+			if background:
+				adv.load_chapter(cpath)
+			else:
+				ok = await adv.load_chapter(cpath)
 		"load":
 			adv.load_game(rest if rest != "" else "quicksave")
 			settle = true

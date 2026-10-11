@@ -16,6 +16,8 @@ var selected := false:
 		queue_redraw()
 var slot_color := Color(0, 0, 0, 0.35)
 var hover_color := Color(1, 0.85, 0.4, 0.35)
+## Optional picture drawn under the icon instead of the dark rounded square.
+var slot_texture: Texture2D
 var _hover := false
 
 
@@ -40,7 +42,11 @@ func _gui_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
-	draw_style_box(_box(hover_color if _hover and item != "" else slot_color), r)
+	if slot_texture:
+		var lit := _hover and item != ""
+		draw_texture_rect(slot_texture, r, false, Color(1.12, 1.05, 0.9) if lit else Color.WHITE)
+	else:
+		draw_style_box(_box(hover_color if _hover and item != "" else slot_color), r)
 	if selected:
 		draw_rect(r.grow(-2), Color(1, 0.85, 0.3), false, 3.0)
 	if item != "":

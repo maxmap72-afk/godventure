@@ -25,6 +25,15 @@ signal movement_finished(reached: bool)
 		queue_redraw()
 ## Set when the "side" animations face left.
 @export var side_faces_left := false
+## Soft shadow on the floor under characters drawn with sprites (the placeholder has its own).
+@export var shadow := true
+@export_range(0.0, 1.0) var shadow_opacity := 0.5
+## Shadow shift to the right (fraction of its width): light coming from the upper left.
+@export var shadow_offset := 0.15
+
+## When idle, now and then play one of the sprite's "fidget" animations (fidget, fidget2,
+## fidget3, with the usual _down/_side/_left/_right variants), so nobody stands frozen.
+@export var fidgets := true
 
 @export_group("Placeholder look")
 @export var body_color := Color(0.25, 0.55, 0.85):
@@ -42,6 +51,14 @@ var _t := 0.0
 var _custom_anim := ""
 var _sprite: AnimatedSprite2D
 var _base_scale := Vector2.ONE
+var _fidget_t := randf_range(2.0, 9.0)
+
+
+func _init() -> void:
+	# Characters are picked on their drawn figure (plus a small margin), not on the
+	# mostly transparent frame, so they don't steal clicks from nearby objects.
+	pixel_perfect = true
+	pick_margin = 6
 
 
 func _ready() -> void:
@@ -146,12 +163,14 @@ func face_towards(global_point: Vector2) -> void:
 	var v := global_point - global_position
 	if v.length() < 1.0:
 		return
+	_stop_fidget()
 	direction = dir_of(v)
 	_update_anim()
 
 
 func face_dir(dir: String) -> void:
 	if dir in ["left", "right", "up", "down"]:
+		_stop_fidget()
 		direction = dir
 		_update_anim()
 
@@ -177,6 +196,7 @@ func _process(delta: float) -> void:
 		_advance(delta)
 	_update_scale()
 	_update_anim()
+	_tick_fidget(delta)
 	if not has_visuals():
 		queue_redraw()
 
@@ -313,6 +333,8 @@ func _anim_player() -> AnimationPlayer:
 
 
 func _update_anim() -> void:
+	if _custom_anim.begins_with("fidget") and (is_walking or is_talking):
+		_custom_anim = ""
 	if _sprite == null or _sprite.sprite_frames == null or _custom_anim != "":
 		return
 	var base := "walk" if is_walking else ("talk" if is_talking else "idle")
@@ -342,10 +364,22 @@ func _play_dir(base: String) -> bool:
 	return false
 
 
+## Soft elliptical shadow under the feet, drawn below the sprite children.
+func _draw_shadow(radius: float) -> void:
+	var c := Vector2(radius * shadow_offset, 0.0)
+	draw_set_transform(c, 0.0, Vector2(1.0, 0.3))
+	for i in 3:
+		var k := 1.0 - i * 0.22
+		draw_circle(Vector2.ZERO, radius * k, Color(0, 0, 0, shadow_opacity / 3.0))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 # --- placeholder puppet ------------------------------------------------------------------
 
 func _draw() -> void:
 	if has_visuals():
+		if shadow:
+			_draw_shadow(height * 0.2)
 		super()
 		return
 	var h := height
@@ -438,3 +472,48 @@ func _draw() -> void:
 			draw_line(mouth - Vector2(r * 0.18, 0), mouth + Vector2(r * 0.18, 0), Color(0.45, 0.15, 0.1), 2.0)
 	if Engine.is_editor_hint():
 		super()
+
+
+# --- idle fidgets ------------------------------------------------------------------------
+
+func _tick_fidget(delta: float) -> void:
+	if not fidgets or _sprite == null or _sprite.sprite_frames == null:
+		return
+	if is_walking or is_talking or _custom_anim != "" or direction == "up":
+		_fidget_t = maxf(_fidget_t, 1.5)
+		return
+	_fidget_t -= delta
+	if _fidget_t > 0.0:
+		return
+	_fidget_t = randf_range(5.0, 11.0)
+	var names := []
+	for n in ["fidget", "fidget2", "fidget3"]:
+		var a := _fidget_anim(n)
+		if a != "":
+			names.append([n, a])
+	if names.is_empty():
+		return
+	var pick: Array = names.pick_random()
+	_custom_anim = pick[0]
+	_sprite.play(pick[1])
+	await _sprite.animation_finished
+	if _custom_anim == pick[0]:
+		_custom_anim = ""
+		_update_anim()
+
+
+## The fidget animation for the current direction ("" if missing or looping).
+func _fidget_anim(n: String) -> String:
+	var frames := _sprite.sprite_frames
+	var want: Array = [n + "_down"] if direction == "down" else [n + "_side", n + "_" + direction]
+	for a in want:
+		if frames.has_animation(a) and not frames.get_animation_loop(a):
+			if a.ends_with("_side"):
+				_sprite.flip_h = (direction == "left") != side_faces_left
+			return a
+	return ""
+
+
+func _stop_fidget() -> void:
+	if _custom_anim.begins_with("fidget"):
+		_custom_anim = ""
