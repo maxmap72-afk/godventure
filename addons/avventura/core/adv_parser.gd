@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## AdvScript is indentation based, like GDScript. A file contains declarations
 ## (var, item, character, title, player, start) and blocks (on ..., dialog ..., function ...).
-## See docs/GUIDA.md for the full reference.
+## See docs/GUIDE.md (English) or docs/GUIDA.md (Italian) for the full reference.
 
 ## Words that start a statement, so they can never be the speaker of a dialogue line.
 const STATEMENTS := ["if", "elif", "else", "while", "set", "walk", "face", "anim", "wait",

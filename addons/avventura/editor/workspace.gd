@@ -78,6 +78,14 @@ func _ready() -> void:
 	_log(t("welcome"))
 
 
+## Opens the guide in the editor's language (falls back to the other one).
+func _open_guide() -> void:
+	var path := "res://docs/GUIDA.md" if _it else "res://docs/GUIDE.md"
+	if not FileAccess.file_exists(path):
+		path = "res://docs/GUIDE.md" if _it else "res://docs/GUIDA.md"
+	open_file(path)
+
+
 func t(key: String) -> String:
 	return T[key][1 if _it else 0]
 
@@ -119,7 +127,7 @@ func _build() -> void:
 	bar.add_child(gui_select)
 	_sync_gui_select()
 	_button(bar, t("refresh"), "Reload", refresh_tree)
-	_button(bar, t("docs"), "Help", func(): open_file("res://docs/GUIDA.md"))
+	_button(bar, t("docs"), "Help", _open_guide)
 	add_child(bar)
 
 	var split := HSplitContainer.new()
