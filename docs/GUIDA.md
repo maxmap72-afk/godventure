@@ -1,5 +1,7 @@
 # Guida ad Avventura
 
+*English version: [GUIDE.md](GUIDE.md).*
+
 Avventura è un motore per avventure grafiche punta-e-clicca nello stile di SCUMM e AGS,
 costruito come plugin per **Godot 4.4 o successivo**. Questa guida spiega come creare un
 gioco, dal primo hotspot fino all'esportazione. Il gioco dimostrativo *Il Segreto del Faro*
@@ -685,7 +687,8 @@ Dalla cartella vengono letti:
 - `acsprset.spr`: gli sprite. Ogni personaggio diventa una scena
   `game/characters/<id>/<id>.tscn` con le animazioni prese dalle sue *view* (`walk_*` e
   `idle_*` dalla view normale, `talk_*` da quella del parlato, le altre view usate da
-  `LockView` con il loro nome, es. `climb_down`); le icone vanno in `game/items/`;
+  `LockView` con il loro nome, es. `climb_down`); i bordi dei fotogrammi vengono ripuliti
+  dall'alone chiaro lasciato dallo scontorno; le icone vanno in `game/items/`;
 - le GUI che sono solo immagini (es. una schermata a tutto schermo) diventano *overlay* in
   `game/overlays/<id>.tscn`, da mostrare con `show id` / `hide id`; la barra delle icone e la
   finestra dell'inventario diventano l'interfaccia **Stile AGS** (`game/gui/ags_gui.json`,
@@ -703,6 +706,8 @@ python3 tools/ags/ags_import.py room PERCORSO/room1.crm --asc PERCORSO/room1.asc
 python3 tools/ags/ags_import.py script PERCORSO/GlobalScript.asc --player cRay
 # solo l'interfaccia (barra icone + finestra dell'inventario), senza toccare stanze e script
 python3 tools/ags/ags_import.py gui PERCORSO/CARTELLA_AGS
+# solo la grafica dei personaggi (scene, animazioni, fotogrammi), senza toccare stanze e script
+python3 tools/ags/ags_import.py characters PERCORSO/CARTELLA_AGS
 # solo gli sprite, come PNG
 python3 tools/ags/spr.py PERCORSO/acsprset.spr --out cartella/ [--only 26,37]
 ```

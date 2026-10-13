@@ -45,7 +45,8 @@ italiano, **Il Segreto del Faro** (`game/`), da giocare e da usare come esempio.
 1. Installa [Godot 4.4 o successivo](https://godotengine.org/download) (provato con 4.4.1 e 4.7.2).
 2. Apri questa cartella con Godot (*Importa* → `project.godot`).
 3. Premi **F5** per giocare, oppure apri la scheda **Avventura** in alto.
-4. Leggi la **[Guida](docs/GUIDA.md)**: dal primo hotspot all'esportazione.
+4. Leggi la **[Guida](docs/GUIDA.md)**: dal primo hotspot all'esportazione
+   (in inglese: **[Guide](docs/GUIDE.md)**).
 
 Per usare il motore in un altro progetto copia `addons/avventura/`, attiva il plugin in
 *Progetto → Impostazioni progetto → Plugin* e crea la cartella `game/` (o usa
@@ -119,7 +120,7 @@ addons/avventura/
 game/        il gioco dimostrativo
 tests/       test unitari e fixture di regressione del motore
 tools/       CLI e server MCP
-docs/        guida e immagini
+docs/        guida (italiano e inglese) e immagini
 ```
 
 ## Sviluppo del motore

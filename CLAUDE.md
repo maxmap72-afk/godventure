@@ -108,7 +108,8 @@ Expressions: and or not == != < > + - * / in; has(item) visited(room) state(obj)
 Handler locals: times, first, verb, target, item. Comments: "# " (hash + space).
 ```
 
-Full reference (Italian): `docs/GUIDA.md`.
+Full reference: `docs/GUIDE.md` (English) and `docs/GUIDA.md` (Italian). They have the same
+content: when you change one, update the other too.
 
 ## Engine map (for engine work)
 
