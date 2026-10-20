@@ -243,6 +243,11 @@ che segue la prospettiva della stanza. Nella scena del personaggio si regola con
 (accesa/spenta), `shadow_opacity` e `shadow_offset` (spostamento verso destra, per una luce
 che viene da sinistra).
 
+**Chi si gira.** Quando il protagonista va da un personaggio (per parlargli, dargli o usare
+qualcosa su di lui) il personaggio si gira verso di lui. `turns_to_player = false` sul nodo
+glielo impedisce: una guardia che dà le spalle e deve restare così (da uno script GDScript:
+`Adv.get_character("beppe").turns_to_player = false`).
+
 Se manca una variante il motore ripiega su quella più vicina (`walk_left` → `walk_side`
 specchiata → `walk_down` → `walk` → `idle`). Per l'animazione di raccolta usa `pickup`.
 

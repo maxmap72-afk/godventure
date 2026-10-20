@@ -247,6 +247,11 @@ prepares everything). Animation names:
 follows the room's perspective. In the character scene it is set with `shadow` (on/off),
 `shadow_opacity` and `shadow_offset` (a shift to the right, for light coming from the left).
 
+**Who turns round.** When the player character walks up to a character (to talk, give or use
+something on them) that character turns towards them. `turns_to_player = false` on the node
+prevents it: a guard who has his back turned and must stay that way (from a GDScript script:
+`Adv.get_character("beppe").turns_to_player = false`).
+
 If a variant is missing, the engine falls back to the closest one (`walk_left` →
 `walk_side` mirrored → `walk_down` → `walk` → `idle`). For the pick-up animation use
 `pickup`.

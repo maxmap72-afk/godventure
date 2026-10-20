@@ -825,7 +825,7 @@ func _approach(hs: AdvHotspot, my: int, instant: bool) -> bool:
 		player.face_dir(hs.face)
 	else:
 		player.face_towards(hs.global_position)
-	if hs is AdvCharacter:
+	if hs is AdvCharacter and hs.turns_to_player:
 		hs.face_towards(player.global_position)
 	return ok
 
@@ -1458,7 +1458,7 @@ func play_video(video_name: String, skippable: bool = true) -> void:
 	if fast or skipping or DisplayServer.get_name() == "headless":
 		return
 	var layer := CanvasLayer.new()
-	layer.layer = 90
+	layer.layer = 101   # above the fade layer (100): a video started after `fade out` is seen
 	var bg := ColorRect.new()
 	bg.color = Color.BLACK
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)

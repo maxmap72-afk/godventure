@@ -36,6 +36,9 @@ signal movement_finished(reached: bool)
 @export var fidgets := true
 ## Footstep sounds while walking (the room's `footsteps` sound), in time with the walk cycle.
 @export var footsteps := true
+## Turns towards the player character who walks up to it (to talk, give, use...). Off for
+## someone who must keep their back turned (a guard busy elsewhere).
+@export var turns_to_player := true
 
 @export_group("Placeholder look")
 @export var body_color := Color(0.25, 0.55, 0.85):
