@@ -21,6 +21,9 @@ extends Node2D
 		queue_redraw()
 ## Music played on enter (file name in game/audio, without extension).
 @export var music := ""
+## Footstep sound of this floor (game/audio/NAME.*, or variants NAME_1, NAME_2... picked at
+## random). Empty: no footsteps.
+@export var footsteps := ""
 ## Background color drawn when there is no "Background" node (handy for prototypes).
 @export var background_color := Color(0.16, 0.17, 0.24):
 	set(v):
@@ -45,6 +48,10 @@ extends Node2D
 	set(v):
 		near_scale = v
 		queue_redraw()
+
+## Multiplies the walking speed (speed already shrinks with the perspective scale: a map
+## with tiny figures can speed them up).
+@export var walk_speed_scale := 1.0
 
 @export_group("Camera")
 ## Keep the camera on the player (for rooms wider than the screen).
@@ -111,7 +118,22 @@ func rebuild_walkable() -> void:
 		else:
 			walk.append(area.polygon_in(self))
 			block.append_array(area.hole_polygons(self))
-	pathfinder.build(walk, block)
+	var trails := []
+	for n in nodes_of_type(self, "AdvWalkPath"):
+		if n.enabled and n.points.size() >= 2:
+			trails.append(n.points_in(self))
+	_has_trails = not trails.is_empty()
+	if trails.is_empty():
+		pathfinder.build(walk, block)
+	else:
+		pathfinder.build_network(trails)
+
+
+var _has_trails := false
+
+## True for map rooms walked along AdvWalkPath trails instead of walk areas.
+func has_trails() -> bool:
+	return _has_trails
 
 
 func find_path(from: Vector2, to: Vector2) -> PackedVector2Array:
@@ -190,6 +212,8 @@ static func _is_type(n: Node, type_name: String) -> bool:
 			return n is AdvCharacter
 		"AdvWalkArea":
 			return n is AdvWalkArea
+		"AdvWalkPath":
+			return n is AdvWalkPath
 		"AdvRegion":
 			return n is AdvRegion
 		"Marker2D":

@@ -63,6 +63,7 @@ game/
   gui/font.ttf|otf|fnt       carattere del gioco (per esempio un font pixel: viene usato senza antialiasing)
   tests/*.advtest            soluzioni automatiche (test)
   title.svg|png              sfondo del menu iniziale (facoltativo)
+  title_logo.png|svg         logo piccolo nell'angolo in alto a destra del menu iniziale (facoltativo)
   game.gd                    funzioni GDScript richiamabili dagli script (facoltativo)
 ```
 
@@ -128,6 +129,22 @@ Figli tipici:
 - **Hotspot e personaggi** – come figli diretti della stanza vengono ordinati in profondità
   secondo la loro Y (chi è più in basso sta davanti). Per elementi sempre in primo piano
   usa uno `z_index` positivo.
+- **Passi** – la proprietà `footsteps` della stanza è il suono del pavimento (un file in
+  `audio/`, oppure varianti `NOME_1`, `NOME_2`... scelte a caso): ogni personaggio che cammina lo
+  suona a tempo con l'animazione di camminata (al primo fotogramma e a metà ciclo), dal punto in
+  cui si trova e più piano se è lontano. `footsteps = false` su un personaggio lo rende silenzioso.
+- **Buio** – un nodo `AdvDarkness` (ColorRect figlio diretto della stanza) copre la stanza di buio:
+  si vede solo un cerchio di luce attorno al personaggio in `lit_by` (vuoto = il giocatore, `-` =
+  nessuno, buio totale) e attorno ai Marker2D figli (luci fisse, raggio nel metadato `radius`).
+  Le parti già illuminate restano visibili in penombra, così la mappa si scopre esplorando; quello
+  che è stato visto resta nel salvataggio.
+- **Sentieri (mappe)** – nodi `AdvWalkPath` (Line2D): per le stanze-mappa viste dall'alto,
+  alla Monkey Island. Se la stanza ne ha almeno uno, i personaggi camminano solo lungo le linee
+  (unite dove si incrociano o dove un vertice tocca un'altra linea) e le aree di camminata sono
+  ignorate. Un clic porta al punto più vicino dei sentieri; se il punto è in una parte non
+  collegata (un labirinto), il personaggio si ferma al punto raggiungibile più vicino e un'uscita
+  irraggiungibile non scatta. Con `walk_speed_scale` della stanza si velocizzano le figurine
+  piccole. `enable`/`disable` accendono e spengono un sentiero (un ponte che crolla...).
 - **Walk-behind** – nodi `AdvWalkBehind` (come le *walk-behind area* di AGS): un pezzo dello
   sfondo (una colonna, una balaustra, lo schienale di un sedile) che viene ridisegnato sopra i
   personaggi che stanno *dietro*. Il pezzo è il poligono (si disegna sopra lo sfondo con
@@ -256,6 +273,7 @@ on use vermi on pala:           # combinare due oggetti (vale in entrambi i vers
     nina: La pala non ha fame.
 on use chiave on porta:         # oggetto su un hotspot
 on give vermi to beppe:         # dare a un personaggio (anche "usa" su un personaggio lo prova)
+on walk floor:                  # clic sul pavimento (prima di camminare); `stop` annulla il passo
 ```
 
 ## 8. Il linguaggio AdvScript
@@ -315,7 +333,7 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | `enable` / `disable` | `disable porta` · `enable ponte` | interattività, aree calpestabili |
 | `state` | `state barile aperto` · `state faro acceso in spiaggia` | stato visivo salvato |
 | `goto` | `goto faro` · `goto molo at pontile` · `goto molo at 240, 350` | cambia stanza (anche in un punto preciso) |
-| `place` | `place beppe at barile` · `place beppe in faro at scala` · `place beppe in faro at 600, 500` | sposta un personaggio |
+| `place` | `place beppe at barile` · `place beppe in faro at scala` · `place beppe in faro at 600, 500` · `place beppe at -60, 500 anywhere` | sposta un personaggio (sul punto calpestabile più vicino; con `anywhere` esattamente lì, anche fuori schermo, per farlo poi entrare camminando) |
 | `control` | `control beppe` | cambia protagonista |
 | `dialog` | `dialog beppe` | apre un dialogo |
 | `option` | `option on beppe.vermi` · `option off beppe.faro` | attiva/disattiva opzioni |
@@ -333,6 +351,13 @@ volte questo script è già stato eseguito) e `first` (vero la prima volta).
 | `fade` | `fade out 1` · `fade in` | dissolvenza al nero |
 | `print` | `print monete={monete}` | messaggio di debug |
 | `end_game` | `end_game` | fine della partita (torna al menu) |
+
+**Transizioni musicali (alla iMuse).** La musica non si interrompe mai di colpo: cambiando
+brano (da `music` o dalla musica di una stanza) il vecchio sfuma mentre il nuovo entra, in
+`avventura/audio/music_fade` secondi (1,5); `music stop` sfuma allo stesso modo. Se si torna a
+un brano sentito da poco (entro `avventura/audio/music_resume_seconds`, 3 minuti) riprende da
+dove era rimasto invece di ricominciare. Anche i suoni ancora in corso nella stanza che si
+lascia (ambienti, loop) sfumano in `avventura/audio/room_sound_fade` secondi.
 
 Esempio completo con quasi tutto:
 
@@ -451,6 +476,11 @@ porta") e l'inventario in un pannello in basso. Clic destro esegue il verbo pred
 evidenziato nel pannello. Le stanze pensate per questa interfaccia dovrebbero lasciare
 libera la fascia bassa (circa 190 pixel), come nei giochi originali; altrimenti la
 telecamera scorre sopra il pannello. I verbi sono configurabili nella proprietà `verbs`.
+Un oggetto che ha sia `on use OGGETTO:` sia degli `on use OGGETTO on ...:` (un vestito da lavare
+nella fontana e poi da indossare) fa aspettare il secondo bersaglio ("Usa Vestito con"): un clic
+sullo stesso oggetto o sul protagonista esegue l'uso da solo. In tutte le interfacce, mentre un
+oggetto aspetta il bersaglio, si può cliccare anche il protagonista: `on use OGGETTO on nina:` se
+esiste, altrimenti `on use OGGETTO:`.
 
 **Stile AGS (barra icone).** Come nei modelli di Adventure Game Studio: portando il mouse in
 cima allo schermo compare una barra di icone (inventario, salva, carica, menu); l'inventario è
@@ -480,7 +510,7 @@ Comandi comuni a tutte le interfacce:
 coin") estendi `AdvGui` e ridefinisci `click_world()`, `click_item()` e `hover_text()`, poi
 indica la tua scena nelle impostazioni.
 
-Il menu iniziale mostra `game/title.svg|png` se esiste. Il giocatore può regolare velocità
+Il menu iniziale mostra `game/title.svg|png` se esiste, e `game/title_logo.png` (largo 120 pixel) nell'angolo in alto a destra. Il giocatore può regolare velocità
 del testo, avanzamento automatico, volumi e schermo intero (salvati in `user://settings.cfg`).
 
 ## 11. Salvataggi
@@ -502,8 +532,9 @@ expect room() == "auto"
 checkpoint 02_auto Shanghai - La fuga sulla Duesenberg
 ```
 
-Se la cartella `scene/` contiene questi file, il menu iniziale mostra **Scegli scena**: scegliendo
-un titolo si riparte da lì, con oggetti, variabili e personaggi esattamente come in una partita
+Se la cartella `scene/` contiene questi file, **Ctrl+Maiusc+S** (nel menu iniziale o durante il
+gioco) apre la lista **Scegli scena**; la voce non compare nei menu, così il giocatore non salta la
+storia. Scegliendo un titolo si riparte da lì, con oggetti, variabili e personaggi esattamente come in una partita
 vera, e l'ingresso della stanza (la sua scena iniziale) viene rieseguito. I file si rigenerano
 ogni volta che si lanciano i test; dalla console si prova con `chapter ID`.
 
@@ -649,7 +680,12 @@ verifica con lint, test, una partita e uno screenshot.
 | `avventura/general/game_dir` | `res://game` | cartella del gioco |
 | `avventura/gui/scene` | `two_click_gui.tscn` | interfaccia |
 | `avventura/gui/show_title_menu` | `true` | menu iniziale |
-| `avventura/gui/language` | `""` | lingua dell'interfaccia (`it`, `en`; vuoto = del sistema) |
+| `avventura/general/source_language` | `it` | lingua in cui sono scritti i testi del gioco |
+| `avventura/general/intro_video` | `""` | video (in `game/video/`) mostrato a ogni *Nuova partita* dal menu iniziale; non si può saltare |
+| `avventura/audio/music_fade` | `1.5` | secondi di dissolvenza incrociata tra due brani |
+| `avventura/audio/music_resume_seconds` | `180` | un brano ripreso entro questo tempo continua da dove era rimasto |
+| `avventura/audio/room_sound_fade` | `1.0` | secondi di sfumatura dei suoni della stanza che si lascia |
+| `avventura/gui/language` | `""` | lingua iniziale (`it`, `en`...; vuoto = quella del sistema, se il gioco la ha) |
 | `avventura/text/seconds_per_character` | `0.05` | durata delle battute |
 | `avventura/text/min_seconds` | `1.5` | durata minima di una battuta |
 | `avventura/interaction/walk_before_look` | `false` | camminare fino alle cose prima di guardarle |
@@ -665,9 +701,28 @@ verifica con lint, test, una partita e uno screenshot.
 file `.adv` al pacchetto. Le cartelle `tests/` e `tools/` non servono al gioco: puoi
 escluderle nei filtri dell'esportazione.
 
-**Traduzioni.** Tutto il testo mostrato passa da `tr()`: con i normali file di traduzione di
-Godot (CSV o PO) puoi tradurre battute, nomi e opzioni usando il testo originale come
-chiave. Le scritte dell'interfaccia sono già in inglese e italiano
+**Traduzioni.** Come in AGS, ogni lingua è un file di traduzione: `game/lang/<codice>.po`
+(formato gettext, si apre con qualunque editor PO come Poedit, o con un editor di testo).
+Per ogni testo c'è l'originale (`msgid`) e la traduzione (`msgstr`); una traduzione vuota
+lascia il testo originale. Il file si crea e si aggiorna con:
+
+```sh
+python3 tools/adv.py i18n en      # crea o aggiorna game/lang/en.po
+```
+
+Raccoglie tutto quello che il giocatore legge: battute (anche `char@X,Y:`), opzioni dei
+dialoghi, nomi e descrizioni di oggetti e personaggi, il titolo, i nomi e le descrizioni
+degli hotspot nelle scene, i titoli dei capitoli e i testi negli script GDScript del gioco
+(`tr("...")` e le battute "Nome: testo" dei minigiochi). Le traduzioni già fatte restano;
+i testi spariti dal gioco finiscono in fondo come obsoleti (`#~`). Rilancialo dopo ogni
+modifica ai testi: le righe nuove avranno la traduzione vuota. Le `{espressioni}` delle
+battute vanno copiate tali e quali nella traduzione.
+
+Il giocatore sceglie la lingua in *Impostazioni → Lingua* (compare quando c'è almeno una
+traduzione) e la scelta resta salvata; si cambia al volo, senza riavviare. Per provare:
+`python3 tools/adv.py play "..." --lang en`, `shot ... --lang en`, `run --lang en`, oppure
+`--adv-lang=en` a Godot. I test (`.advtest`) girano sempre nella lingua originale.
+Le scritte dell'interfaccia sono già in inglese e italiano
 (`addons/avventura/i18n/avventura.csv`); aggiungi una colonna per altre lingue.
 
 ## 17. Importare un gioco AGS

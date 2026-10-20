@@ -21,14 +21,20 @@ python3 tools/adv.py shot /tmp/s.png             # screenshot of the session (xv
 python3 tools/adv.py shot /tmp/s.png "gui show_pause" --gui scumm   # menus / other interface
 python3 tools/adv.py new-room ID "Name" | new-character ID "Name" "#ffcc00" | new-item ID "Name"
 python3 tools/adv.py import                      # after adding/changing art
+python3 tools/adv.py i18n en                     # create/update the translation game/lang/en.po
+python3 tools/adv.py play "look cartello" --lang en   # play/shot/run in a translation
 ```
 
 Definition of done for any content change: **lint has 0 errors and tests pass**. When you
 add or change a puzzle, extend `game/tests/walkthrough.advtest` (or add a new `.advtest`)
 so the whole game stays solvable. The walkthrough's `checkpoint ID Title` lines also
-regenerate `game/scene/*.json` (the title menu's "Scegli scena" chapter starts): add one when a
+regenerate `game/scene/*.json` (the "Scegli scena" chapter starts, a hidden list opened with Ctrl+Shift+S): add one when a
 new room is reached. Engine changes: also run the engine fixtures with
 `godot --headless --path . -- --adv-game-dir=res://tests/fixture --adv-test`.
+Translations (like AGS): `game/lang/<locale>.po`, msgid = the original text. After adding or
+changing player-visible text in a translated game run `python3 tools/adv.py i18n LOCALE` and fill
+the new empty msgstr entries (keep `{expressions}` and `%d` as they are); the player picks the
+language in Settings.
 
 ## Layout and conventions
 
@@ -48,6 +54,9 @@ tools/ags/                 AGS 3.x importer: `ags_import.py game AGS_DIR` (whole
 game/overlays/<id>.tscn    full-screen pictures/panels shown with `show ID` (imported AGS GUIs)
 game/gui/ags_gui.json      layout of the AGS-style interface (gui/ags_gui.tscn): icon bar + inventory window
 game/gui/font.ttf          optional game font (pixel fonts stay crisp: no antialiasing)
+game/title.png, title_logo.png   title-menu background and the small logo in its top right corner
+game/lang/<locale>.po      translations (python3 tools/adv.py i18n LOCALE)
+game/video/<name>.ogv      cutscene videos (`video NAME`; setting avventura/general/intro_video)
 game/overlays/splash.tscn  optional splash (e.g. a disclaimer) shown before the title menu
 ```
 
@@ -64,7 +73,9 @@ game/overlays/splash.tscn  optional splash (e.g. a disclaimer) shown before the 
 
 Rooms are text scenes you can edit directly. Keep `script = ExtResource(...)` as the first
 property of a node, then exported properties. Useful node types:
-- `AdvRoom` (Node2D root): `display_name`, perspective `far_y/far_scale/near_y/near_scale`.
+- `AdvRoom` (Node2D root): `display_name`, perspective `far_y/far_scale/near_y/near_scale`, `music`
+  (crossfaded iMuse-style, started after the `on enter` script begins), `footsteps` (floor sound
+  NAME or variants NAME_1..NAME_n, played in time with walk cycles; `tools/audio/footsteps.py` makes them).
 - `Background` Sprite2D with `centered = false`, `z_index = -100`.
 - `AdvWalkArea` (Polygon2D) with `polygon = PackedVector2Array(x1, y1, x2, y2, ...)`; child
   Polygon2D nodes are obstacles.
@@ -72,6 +83,13 @@ property of a node, then exported properties. Useful node types:
 - `AdvWalkBehind` (Polygon2D) – AGS walk-behind: the background under its `polygon` (or the opaque
   pixels of `mask`, an image the size of the background) is drawn over characters whose feet are
   above `baseline` (0 = lowest point). Direct child of the room.
+- `AdvWalkPath` (Line2D) – trails for map rooms: when a room has any, walking follows the lines
+  (joined where they cross or a vertex touches another line) instead of the walk areas; clicks snap
+  to the nearest trail, an unreachable spot walks to the closest reachable point (and an unreachable
+  exit doesn't fire). `AdvRoom.walk_speed_scale` speeds up tiny map figures.
+- `AdvDarkness` (ColorRect, direct child of the room) – dungeon darkness: a circle of light around
+  `lit_by` (a character id, "" = the player, "-" = nobody) and around child Marker2D lights
+  (`metadata/radius`); explored parts stay dimly visible (fog of war, kept in the save).
 - `AdvCharacter` (Area2D) for NPCs fixed in one room; engine-managed characters are declared
   in characters.adv with `room = ...` and `at = MARKER` instead.
 After editing scenes restart the play session (`adventure_play` with `restart: true`).
@@ -92,7 +110,7 @@ pickup obj [as item] / inventory add|remove item [to|from char] / video name (ga
 show|hide obj [in room] [fade SECS] / enable|disable obj [in room] / state obj value [in room] / goto room [at entry|X,Y]
 on walk_onto REGION: / on walk_off REGION:   (AdvRegion nodes, like AGS regions)
 john@476,172: text   (speech at a fixed screen position, like AGS SayAt)
-place char at target / place char in room [at entry] / control char / camera follow|to|shake
+place char at target / place char in room [at entry] [anywhere] / control char / camera follow|to|shake
 dialog name / option on|off dialog.opt / end / back / stop / call fn(args) / end_game
 cutscene: / bg: / random: / cycle: / sequence: / once: / do: / while cond:
 sound name / music name|stop / fade out|in [secs] / print text
@@ -120,10 +138,12 @@ content: when you change one, update the other too.
 - `core/adv_registry.gd` – loads all `.adv`, handler lookup; `adv_state.gd` – saved state.
 - `core/adv_controller.gd` – text command language (console, TCP remote, batch, tests).
 - `core/adv_linter.gd`, `adv_scaffold.gd`, `adv_pathfinder.gd` (visibility graph).
-- `nodes/` – AdvRoom, AdvHotspot, AdvCharacter (placeholder puppet), AdvWalkArea, AdvWalkBehind, AdvEntry.
+- `nodes/` – AdvRoom, AdvHotspot, AdvCharacter (placeholder puppet), AdvWalkArea, AdvWalkPath, AdvWalkBehind, AdvDarkness, AdvEntry.
+- `core/adv_i18n.gd` – .po translations (load, collect texts); `tools/i18n.py` writes the files.
 - `gui/` – AdvGui base, TwoClickGui (default), ScummGui, AgsGui (icon bar + inventory window); `editor/` – workspace tab, highlighter.
 Command line flags (after `--`): `--adv-lint`, `--adv-test[=file]`, `--adv-run="cmds"`,
 `--adv-load=/--adv-save=path`, `--adv-start=room[:entry]`, `--adv-fast`, `--adv-remote[=port]`,
-`--adv-screenshot=path`, `--adv-gui=scumm|two_click`, `--adv-game-dir=res://...`, `--adv-seed=N`.
+`--adv-screenshot=path`, `--adv-gui=scumm|two_click`, `--adv-game-dir=res://...`, `--adv-seed=N`,
+`--adv-lang=LOCALE`, `--adv-strings=out.json` (translatable texts, used by `adv.py i18n`).
 Godot quirks: run `--import` when `.godot/` is missing (the CLI does it); textures loaded
 inside `_draw` must stay referenced (see `Adv.item_icon` cache).

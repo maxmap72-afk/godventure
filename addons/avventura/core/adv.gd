@@ -8,6 +8,7 @@ extends Node
 ##   await Adv.change_room("beach", "pier")
 ## GUIs listen to its signals; tools and tests drive it through [AdvController].
 
+signal language_changed(code: String)
 signal game_started
 signal room_entered(room_id: String)
 signal room_exiting(room_id: String)
@@ -33,6 +34,12 @@ const VERSION := "0.1.0"
 const DIRECTIONS := ["left", "right", "up", "down"]
 const DEFAULTS := {
 	"avventura/general/game_dir": "res://game",
+	"avventura/general/source_language": "it",
+	"avventura/general/intro_video": "",
+	"avventura/audio/music_fade": 1.5,
+	"avventura/audio/music_resume_seconds": 180.0,
+	"avventura/audio/room_sound_fade": 1.0,
+	"avventura/gui/language": "",
 	"avventura/gui/scene": "res://addons/avventura/gui/two_click_gui.tscn",
 	"avventura/gui/show_title_menu": true,
 	"avventura/text/seconds_per_character": 0.05,
@@ -85,7 +92,10 @@ var save_dir := "user://saves"
 ## Game state at the last arrival in a room, before its `on enter` ran (for chapter starts).
 var arrival_snapshot: Dictionary = {}
 ## Player preferences (user://settings.cfg).
-var prefs := {"text_speed": 1.0, "auto_advance": true, "music_volume": 0.8, "sfx_volume": 1.0, "fullscreen": false}
+var prefs := {"text_speed": 1.0, "auto_advance": true, "music_volume": 0.8, "sfx_volume": 1.0, "fullscreen": false,
+	"language": ""}
+## The game's translations (<game_dir>/lang/*.po), registered with the TranslationServer.
+var _game_translations: Array[Translation] = []
 
 var _main: Node
 const OVERLAYS := "_overlays"
@@ -102,12 +112,17 @@ var _in_transition := false
 var _recent: PackedStringArray = PackedStringArray()
 var _music: AudioStreamPlayer
 var _music_name := ""
+## Track name -> {pos, t}: where each track was when it faded out, to resume it (play_music).
+var _music_marks := {}
+## The entered room's music, until its 'on enter' script has had the chance to choose another.
+var _pending_room_music := ""
 var _shake := 0.0
 var _warned: Dictionary = {}
 var _entered := 0
 var _icons: Dictionary = {}
 var _regions_inside: Dictionary = {}
 var _playing_video := false
+var _footstep_cache := {}
 
 
 class _Waiter:
@@ -145,13 +160,14 @@ static func setting(name: String) -> Variant:
 func boot(main: Node) -> void:
 	_main = main
 	reload_scripts()
+	apply_language()
 	_build_world()
 	controller = AdvController.new()
 	controller.name = "Controller"
 	controller.adv = self
 	add_child(controller)
 	var headless := DisplayServer.get_name() == "headless"
-	var cli := args.has("lint") or args.has("test") or args.has("scaffold") or args.has("run") or args.has("run-file")
+	var cli := args.has("lint") or args.has("strings") or args.has("test") or args.has("scaffold") or args.has("run") or args.has("run-file")
 	if cli:
 		# Command line runs must always end, even if a script error aborts a coroutine.
 		var limit := float(args.get("timeout", 600))
@@ -163,6 +179,9 @@ func boot(main: Node) -> void:
 		_create_gui()
 	if args.has("lint"):
 		controller.cli_lint()
+		return
+	if args.has("strings"):
+		controller.cli_strings(str(args.strings))
 		return
 	if args.has("test"):
 		controller.cli_test(str(args.test))
@@ -206,6 +225,7 @@ func _parse_args() -> Dictionary:
 ## (Re)loads all .adv scripts. Safe while playing: running scripts keep their code.
 func reload_scripts() -> Array:
 	registry.load_game(game_dir)
+	_load_translations()
 	_icons.clear()
 	for i in registry.issues:
 		if i.level == "error":
@@ -237,9 +257,7 @@ func _build_world() -> void:
 	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fade_rect.modulate.a = 0.0
 	layer.add_child(_fade_rect)
-	_music = AudioStreamPlayer.new()
-	_music.bus = _bus("Music")
-	add_child(_music)
+	_bus("Music")
 	_bus("SFX")
 	_apply_prefs()
 	var gd_path := game_dir + "/game.gd"
@@ -343,7 +361,8 @@ func _enter_room(room_id: String, at: String, how: String, pos: Variant = null) 
 			await _room_event("exit")
 			room_exiting.emit(from)
 		await fade(true, 0.3)
-		_store_characters()
+		if how != "load":   # on load the state is already the saved one: the old room must not overwrite it
+			_store_characters()
 		_unload_room()
 	var scene = load(registry.rooms.get(room_id, ""))
 	var node: Node = scene.instantiate() if scene is PackedScene else null
@@ -382,14 +401,21 @@ func _enter_room(room_id: String, at: String, how: String, pos: Variant = null) 
 	if room == null:
 		_in_transition = false
 		return
+	# The room's own music waits for its 'on enter' script to start: a script that picks another
+	# track (day/night themes...) wins, so the room track doesn't start just to fade out again.
+	_pending_room_music = ""
 	if room.music != "":
-		play_music(room.music)
+		if how == "goto":
+			_pending_room_music = room.music
+		else:
+			play_music(room.music)
 	await fade(false, 0.3)
 	_in_transition = false
 	room_entered.emit(room_id)
 	if how == "goto":
 		_store_characters()
 		arrival_snapshot = state.to_dict()
+		_start_room_music_soon()
 		await _room_event("enter")
 
 
@@ -448,6 +474,7 @@ func _room_event(event: String) -> void:
 func _unload_room() -> void:
 	if room == null:
 		return
+	_fade_out_room_sounds(room)
 	world.remove_child(room)
 	room.queue_free()
 	room = null
@@ -472,7 +499,7 @@ func _apply_room_state() -> void:
 		if o.has("enabled"):
 			if n is AdvHotspot:
 				n.interactive = o.enabled
-			elif n is AdvWalkArea or n is AdvRegion:
+			elif n is AdvWalkArea or n is AdvWalkPath or n is AdvRegion:
 				n.enabled = o.enabled
 		if o.has("state"):
 			_apply_state(n, str(o.state))
@@ -494,7 +521,7 @@ func _spawn_characters() -> void:
 			node = create_character(id)
 			room.add_child(node)
 		if c.get("pos") is Vector2:
-			node.teleport(c.pos)
+			node.teleport(c.pos, true)   # a saved spot is trusted (it may be off the walk area: in water, off screen)
 		elif str(c.get("at", "")) != "":
 			var e := _entry_point(str(c.at), "")
 			node.teleport(e.pos)
@@ -633,7 +660,8 @@ func character_room(id: String) -> String:
 
 
 ## Moves a character: to a target in the current room, or into another room.
-func place(who: String, room_id: String, loc: Variant) -> void:
+## `anywhere`: keep the exact point even off the walkable area (to start a walk-in off screen).
+func place(who: String, room_id: String, loc: Variant, anywhere: bool = false) -> void:
 	var id := resolve_char(who)
 	if room_id == "":
 		room_id = state.room
@@ -657,8 +685,8 @@ func place(who: String, room_id: String, loc: Variant) -> void:
 			room.add_child(node)
 		var p = position_of(loc, node) if loc != null else _entry_point("", "").pos
 		if p != null:
-			node.teleport(p)
-			c.pos = p
+			node.teleport(p, anywhere)
+			c.pos = node.room_position()
 	elif old_room == state.room and room:
 		var node := get_character(id)
 		if node:
@@ -716,6 +744,7 @@ func perform(verb: String, target: String, item: String = "", instant: bool = fa
 	action_performed.emit(verb, target, item)
 	_interaction += 1
 	var my := _interaction
+	var unreachable := false
 	if hs and hs != player and player:
 		if hs.walk_before and (verb != "look" or walk_before_look):
 			var ok := await _approach(hs, my, instant)
@@ -723,19 +752,30 @@ func perform(verb: String, target: String, item: String = "", instant: bool = fa
 				return
 			if not ok:
 				log_line("[unreachable] %s" % target)
+				unreachable = true
 		else:
 			player.face_towards(hs.global_position)
 	if not accepts_input():
 		return
+	# On a map, a spot on a trail network the player isn't on (across a river): nothing happens but
+	# a look or a word; exits are handled by _builtin (no room change). Elsewhere handlers decide
+	# (a seated player still reaches the table).
+	if unreachable and room.has_trails() and not (hs and hs.is_exit()) and not verb in ["look", "talk"]:
+		_set_busy(true)
+		await say(state.player, tr("I can't get there from here."))
+		_set_busy(false)
+		return
 	_set_busy(true)
 	var locals := {"verb": verb, "target": target, "item": item}
 	var h := registry.find_handler(state.room, verb, target, item, false)
+	if item != "" and h.is_empty() and verb == "use" and hs != null and hs == player:
+		h = registry.find_handler(state.room, "use", item, "", false)   # use ITEM on oneself: its own use
 	if item != "" and h.is_empty() and verb == "use" and hs is AdvCharacter:
 		h = registry.find_handler(state.room, "give", target, item, false)
 	if not h.is_empty():
 		await interp.run_handler(h, locals)
 	else:
-		var done: bool = await _builtin(verb, hs, target, item)
+		var done: bool = await _builtin(verb, hs, target, item, unreachable)
 		if not done:
 			h = registry.find_handler(state.room, verb, target, item, true)
 			if not h.is_empty():
@@ -749,6 +789,17 @@ func perform(verb: String, target: String, item: String = "", instant: bool = fa
 func walk_player(to: Vector2) -> void:
 	if not accepts_input() or player == null:
 		return
+	# `on walk floor:` in the room script runs first; a `stop` in it cancels the walk
+	# (a player held fast, a floor that gives way...).
+	var h := registry.find_handler(state.room, "walk", "floor", "", false)
+	if not h.is_empty():
+		_interaction += 1
+		_set_busy(true)
+		var r: int = await interp.run_handler(h, {"verb": "walk", "target": "floor", "item": "",
+			"x": roundi(to.x), "y": roundi(to.y)})
+		_set_busy(false)
+		if r == AdvInterpreter.STOP or not accepts_input():
+			return
 	_interaction += 1
 	_approaching = false
 	if fast:
@@ -767,6 +818,8 @@ func _approach(hs: AdvHotspot, my: int, instant: bool) -> bool:
 		ok = await player.move_to(dest)
 	if my != _interaction:
 		return false
+	if ok and room and player.room_position().distance_to(room.closest_walkable(dest)) > 8.0:
+		ok = false   # stopped short: the spot is in a part of the room that can't be reached
 	_approaching = false
 	if hs.face != "auto":
 		player.face_dir(hs.face)
@@ -777,9 +830,11 @@ func _approach(hs: AdvHotspot, my: int, instant: bool) -> bool:
 	return ok
 
 
-func _builtin(verb: String, hs: AdvHotspot, target: String, item: String) -> bool:
+func _builtin(verb: String, hs: AdvHotspot, target: String, item: String, unreachable := false) -> bool:
 	if item != "":
 		return false
+	if unreachable and hs and hs.is_exit():
+		return verb == "walk" or verb == hs.get_default_verb()   # can't get there: no room change
 	if hs == null:
 		if verb == "look":
 			var desc := str(registry.items.get(target, {}).get("props", {}).get("description", ""))
@@ -1051,7 +1106,7 @@ func _set_object(obj: String, key: String, value: Variant, room_id: String) -> v
 		"enabled":
 			if n is AdvHotspot:
 				n.interactive = value
-			elif n is AdvWalkArea:
+			elif n is AdvWalkArea or n is AdvWalkPath:
 				n.enabled = value
 				room.rebuild_walkable()
 			elif n is AdvRegion:
@@ -1119,7 +1174,7 @@ func is_object_enabled(obj: String, room_id: String = "") -> bool:
 		var n := _object_node(obj)
 		if n is AdvHotspot:
 			return n.interactive
-		if n is AdvWalkArea or n is AdvRegion:
+		if n is AdvWalkArea or n is AdvWalkPath or n is AdvRegion:
 			return n.enabled
 	return true
 
@@ -1261,8 +1316,47 @@ func play_sound(sound_name: String) -> void:
 	p.play()
 
 
-func play_music(music_name: String) -> void:
-	if music_name == _music_name and _music.playing:
+## A footstep of [param ch] on the room's floor (AdvRoom.footsteps), from where the character
+## is: softer for far (smaller) figures, slightly varied each time.
+func footstep(ch: AdvCharacter) -> void:
+	if room == null or room.footsteps == "" or fast or skipping or ch.get_parent() == null:
+		return
+	var variants: Array = _footstep_cache.get(room.footsteps, [])
+	if variants.is_empty():
+		for i in range(1, 9):
+			var v := _audio("%s_%d" % [room.footsteps, i])
+			if v:
+				variants.append(v)
+		if variants.is_empty() and _audio(room.footsteps):
+			variants.append(_audio(room.footsteps))
+		if variants.is_empty():
+			_warn_once("footsteps '%s' not found in %s/audio" % [room.footsteps, game_dir])
+			return
+		_footstep_cache[room.footsteps] = variants
+	var p := AudioStreamPlayer2D.new()
+	p.stream = variants[randi() % variants.size()]
+	p.bus = "SFX"
+	p.max_distance = 4000.0
+	p.attenuation = 0.4
+	p.pitch_scale = randf_range(0.92, 1.08)
+	p.volume_db = linear_to_db(clampf(absf(ch.scale.y), 0.25, 1.2)) - (0.0 if ch == player else 3.0) + randf_range(-1.5, 1.0)
+	ch.get_parent().add_child(p)
+	p.global_position = ch.global_position
+	p.finished.connect(p.queue_free)
+	p.play()
+
+
+# --- music (iMuse-like transitions) -------------------------------------------------------------
+# A new track never cuts in: the old one fades out while the new one fades in (equal power,
+# avventura/audio/music_fade seconds). Coming back to a track heard recently resumes it where it
+# was (within avventura/audio/music_resume_seconds), so walking between two rooms with different
+# music doesn't restart them every time.
+
+## Plays a music track (game/audio/NAME), crossfading from the current one. [param fade] < 0 uses
+## the project setting; 0 cuts.
+func play_music(music_name: String, fade: float = -1.0) -> void:
+	_pending_room_music = ""
+	if music_name == _music_name and _music and _music.playing:
 		return
 	var stream := _audio(music_name)
 	if stream == null:
@@ -1270,13 +1364,92 @@ func play_music(music_name: String) -> void:
 		return
 	if "loop" in stream:
 		stream.loop = true
+	log_line("[music] " + music_name)
+	var secs := _music_fade_secs(fade)
+	_fade_out_music(secs)
 	_music_name = music_name
+	_music = AudioStreamPlayer.new()
+	_music.bus = _bus("Music")
 	_music.stream = stream
-	_music.play()
+	add_child(_music)
+	var from := 0.0
+	var mark: Dictionary = _music_marks.get(music_name, {})
+	if not mark.is_empty() and Time.get_ticks_msec() - int(mark.t) < float(setting("avventura/audio/music_resume_seconds")) * 1000.0:
+		from = float(mark.pos)
+		var length := stream.get_length()
+		if length > 0.0:
+			from = fmod(from, length)
+	if secs <= 0.0:
+		_music.play(from)
+		return
+	_music.volume_db = -80.0
+	_music.play(from)
+	var p := _music
+	var t := p.create_tween()
+	t.tween_method(func(v: float): p.volume_db = linear_to_db(maxf(sin(v * PI / 2.0), 0.0001)), 0.0, 1.0, secs)
 
 
-## Plays a full-screen video (game/video/NAME.ogv). Click or Esc skips it.
-func play_video(video_name: String) -> void:
+## Stops the music, fading it out (see play_music).
+func stop_music(fade: float = -1.0) -> void:
+	_pending_room_music = ""
+	_fade_out_music(_music_fade_secs(fade))
+	_music_name = ""
+
+
+## Starts the room's music a couple of frames after its 'on enter' script began, unless the script
+## has chosen the music itself (play_music / stop_music clear the pending track).
+func _start_room_music_soon() -> void:
+	if _pending_room_music == "":
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if _pending_room_music != "":
+		play_music(_pending_room_music)
+
+
+func _music_fade_secs(fade: float) -> float:
+	if fast or skipping:
+		return 0.0
+	return float(setting("avventura/audio/music_fade")) if fade < 0.0 else fade
+
+
+## The current track fades out on its own player and frees itself; its position is remembered.
+func _fade_out_music(secs: float) -> void:
+	var p := _music
+	_music = null
+	if p == null or not is_instance_valid(p):
+		return
+	if p.playing and _music_name != "":
+		_music_marks[_music_name] = {"pos": p.get_playback_position(), "t": Time.get_ticks_msec()}
+	if secs <= 0.0 or not p.playing:
+		p.queue_free()
+		return
+	var start := p.volume_db
+	var t := p.create_tween()
+	t.tween_method(func(v: float): p.volume_db = start + linear_to_db(maxf(cos(v * PI / 2.0), 0.0001)), 0.0, 1.0, secs)
+	t.tween_callback(p.queue_free)
+
+
+## Sounds still playing in a room that is being left (ambiences, loops) fade out instead of
+## stopping dead: their players move to Adv for the fade.
+func _fade_out_room_sounds(node: Node) -> void:
+	var secs := 0.0 if (fast or skipping) else float(setting("avventura/audio/room_sound_fade"))
+	for p in node.find_children("*", "AudioStreamPlayer", true, false):
+		if not p.playing or secs <= 0.0:
+			continue
+		var pos: float = p.get_playback_position()
+		p.get_parent().remove_child(p)
+		add_child(p)
+		p.play(pos)
+		var start: float = p.volume_db
+		var t := p.create_tween()
+		t.tween_method(func(v: float): p.volume_db = start + linear_to_db(maxf(1.0 - v, 0.0001)), 0.0, 1.0, secs)
+		t.tween_callback(p.queue_free)
+
+
+## Plays a video full screen and waits for its end; a click or Esc skips it unless
+## [param skippable] is false.
+func play_video(video_name: String, skippable: bool = true) -> void:
 	var path := _video_path(video_name)
 	if path == "":
 		_warn_once("video '%s' not found in %s/video" % [video_name, game_dir])
@@ -1299,8 +1472,9 @@ func play_video(video_name: String) -> void:
 	add_child(layer)
 	var w := _Waiter.new()
 	player_node.finished.connect(w.done)
-	line_skipped.connect(w.done, CONNECT_ONE_SHOT)
-	skip_started.connect(w.done, CONNECT_ONE_SHOT)
+	if skippable:
+		line_skipped.connect(w.done, CONNECT_ONE_SHOT)
+		skip_started.connect(w.done, CONNECT_ONE_SHOT)
 	_playing_video = true
 	player_node.play()
 	await w.finished
@@ -1325,6 +1499,16 @@ func is_playing_video() -> bool:
 const TITLE_MUSIC := ["menu", "title", "titolo"]
 
 
+## The intro movie (setting avventura/general/intro_video, a name in GAME/video/), played when a
+## new game starts from the title menu; it cannot be skipped.
+func play_intro() -> void:
+	var v := str(setting("avventura/general/intro_video"))
+	if v == "":
+		return
+	stop_music()
+	await play_video(v, false)
+
+
 ## Plays the title-screen music, if the game has one. It stops when a game starts or is loaded.
 func play_title_music() -> void:
 	for n in TITLE_MUSIC:
@@ -1338,10 +1522,6 @@ func _stop_title_music() -> void:
 		stop_music()
 
 
-func stop_music() -> void:
-	_music_name = ""
-	if _music:
-		_music.stop()
 
 
 func _audio(sound_name: String) -> AudioStream:
@@ -1365,13 +1545,14 @@ func _bus(bus_name: String) -> String:
 # --- queries for GUIs and tools -----------------------------------------------------------------
 
 ## The topmost interactive hotspot at a world position.
-func hotspot_at(world_pos: Vector2) -> AdvHotspot:
+## with_player: the player character counts too (a target for "use ITEM with").
+func hotspot_at(world_pos: Vector2, with_player := false) -> AdvHotspot:
 	if room == null:
 		return null
 	var best: AdvHotspot = null
 	var best_key := []
 	for h in room.get_hotspots():
-		if h == player or not h.interactive or not h.is_visible_in_tree():
+		if (h == player and not with_player) or not h.interactive or not h.is_visible_in_tree():
 			continue
 		if not h.contains_point(world_pos):
 			continue
@@ -1704,6 +1885,57 @@ func _vec(v: Variant) -> Variant:
 	if parts.size() == 2 and parts[0].strip_edges().is_valid_float() and parts[1].strip_edges().is_valid_float():
 		return Vector2(parts[0].strip_edges().to_float(), parts[1].strip_edges().to_float())
 	return null
+
+
+# --- languages -----------------------------------------------------------------------------------
+
+func _load_translations() -> void:
+	for t in _game_translations:
+		TranslationServer.remove_translation(t)
+	_game_translations = AdvI18n.load_translations(game_dir)
+	apply_language()
+
+
+## The game's source language first, then one per translation file.
+func languages() -> PackedStringArray:
+	var out := PackedStringArray([str(setting("avventura/general/source_language"))])
+	for t in _game_translations:
+		if not t.locale in out:
+			out.append(t.locale)
+	return out
+
+
+## The language in use: --adv-lang, else the player's choice, else avventura/gui/language,
+## else the system language if the game has it, else the source language.
+func language() -> String:
+	var langs := languages()
+	if not args.has("lang") and (args.has("test") or args.has("run") or args.has("run-file") or args.has("lint")):
+		return langs[0]   # walkthroughs check the source text
+	for want in [str(args.get("lang", "")), str(prefs.language), str(setting("avventura/gui/language"))]:
+		if want != "" and want in langs:
+			return want
+	var sys := OS.get_locale_language()
+	return sys if sys in langs else langs[0]
+
+
+## Only the current language's translation is registered: Godot looks texts up in the fallback
+## locale too, so an English translation would otherwise show through the Italian original.
+func apply_language() -> void:
+	var lang := language()
+	for t in _game_translations:
+		if t.locale == lang:
+			TranslationServer.add_translation(t)
+		else:
+			TranslationServer.remove_translation(t)
+	TranslationServer.set_locale(lang)
+
+
+## Switches language (from the settings menu); the GUI relabels itself.
+func set_language(code: String) -> void:
+	prefs.language = code
+	save_prefs()
+	apply_language()
+	language_changed.emit(code)
 
 
 # --- preferences ---------------------------------------------------------------------------------

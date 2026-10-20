@@ -25,6 +25,7 @@ func _init() -> void:
 	test_parser_say_at()
 	test_parser_fade()
 	test_pathfinder()
+	test_trails()
 	test_walk_behind()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -133,6 +134,11 @@ func test_parser_fade() -> void:
 	check(b[0].obj == "alba" and is_equal_approx(b[0].fade, 2.5), "show OBJ fade SECONDS")
 	check(b[1].obj == "luna" and b[1].fade == 0.0, "hide without fade")
 	check(b[2].obj == "x" and b[2].room == "b", "show in room still works")
+	var q := AdvParser.parse("on enter:\n    place bob in molo at -60, 400 anywhere\n    place bob at porta\n", "res://t.adv")
+	check(q.errors.is_empty(), "place anywhere parses: %s" % str(q.errors))
+	var c: Array = q.handlers[0].body
+	check(c[0].anywhere and c[0].room == "molo" and c[0].loc.pos == Vector2(-60, 400), "place ... anywhere keeps the point")
+	check(not c[1].anywhere, "plain place is clamped")
 
 
 func test_parser_errors() -> void:
@@ -179,6 +185,26 @@ func test_pathfinder() -> void:
 	pf.build([u], [])
 	var up := pf.find_path(Vector2(50, 50), Vector2(350, 50))
 	check(up.size() >= 4, "U-shaped path goes down and up (%s)" % str(up))
+
+
+func test_trails() -> void:
+	var pf := AdvPathfinder.new()
+	# a cross, an L touching it with a vertex, and a separate dead-end trail
+	pf.build_network([PackedVector2Array([Vector2(0, 100), Vector2(200, 100)]),
+		PackedVector2Array([Vector2(100, 0), Vector2(100, 200)]),
+		PackedVector2Array([Vector2(200, 102), Vector2(200, 300), Vector2(400, 300)]),
+		PackedVector2Array([Vector2(600, 0), Vector2(600, 300)])])
+	var path := pf.find_path(Vector2(100, 0), Vector2(400, 300))
+	check(path.size() >= 4 and path[path.size() - 1].distance_to(Vector2(400, 300)) < 0.5,
+		"trail path through the crossing and the touching vertex (%s)" % str(path))
+	for p in path:
+		check(p.x < 0.5 or absf(p.y - 100) < 3 or absf(p.x - 100) < 0.5 or absf(p.x - 200) < 3 or absf(p.y - 300) < 0.5,
+			"trail path stays on the lines (%s)" % str(p))
+	check(pf.closest_walkable(Vector2(150, 140)).distance_to(Vector2(150, 100)) < 0.5, "clicks snap to the nearest trail")
+	check(pf.is_walkable(Vector2(50, 104)) and not pf.is_walkable(Vector2(50, 150)), "only near a trail is walkable")
+	var stuck := pf.find_path(Vector2(0, 100), Vector2(600, 150))
+	check(stuck.size() >= 2 and stuck[stuck.size() - 1].distance_to(Vector2(400, 300)) < 0.5,
+		"an unreachable trail: walk to the nearest reachable point (%s)" % str(stuck))
 
 
 func test_walk_behind() -> void:

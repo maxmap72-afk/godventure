@@ -501,6 +501,7 @@ func _parse_stmt(node: Dictionary) -> Variant:
 				return _bad(line, "write 'goto ROOM', 'goto ROOM at ENTRY' or 'goto ROOM at X, Y'")
 			return st
 		"place":
+			st.anywhere = _pop_flag(w, "anywhere")
 			if w.size() >= 3 and w[1] == "at":
 				st.who = w[0]
 				st.room = ""
@@ -516,7 +517,7 @@ func _parse_stmt(node: Dictionary) -> Variant:
 				st.room = w[2]
 				st.loc = _loc(" ".join(w.slice(4)), line)
 				return st if st.loc != null else null
-			return _bad(line, "write 'place CHARACTER at TARGET' or 'place CHARACTER in ROOM [at ENTRY]'")
+			return _bad(line, "write 'place CHARACTER at TARGET' or 'place CHARACTER in ROOM [at ENTRY]' (optionally anywhere)")
 		"control", "dialog", "sound", "video":
 			if w.size() != 1:
 				return _bad(line, "write '%s NAME'" % word)

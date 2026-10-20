@@ -52,9 +52,8 @@ var _dim: ColorRect
 func _ready() -> void:
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var lang := str(ProjectSettings.get_setting("avventura/gui/language", ""))
-	if lang != "":
-		TranslationServer.set_locale(lang)
+	Adv.apply_language()
+	Adv.language_changed.connect(func(_c): retranslate())
 	root = Control.new()
 	root.name = "Root"
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -269,7 +268,7 @@ func _update_hover(mp: Vector2) -> void:
 	if _in_menu or Adv.room == null or not Adv.accepts_input():
 		hovered_hotspot = null
 	elif not over_gui:
-		hovered_hotspot = Adv.hotspot_at(Adv.screen_to_world(mp))
+		hovered_hotspot = Adv.hotspot_at(Adv.screen_to_world(mp), item_pending())
 		hovered_item = ""
 	else:
 		hovered_hotspot = null
@@ -329,6 +328,10 @@ func _on_key(event: InputEventKey) -> void:
 			toggle_console()
 			get_viewport().set_input_as_handled()
 		return
+	if event.keycode == KEY_S and event.ctrl_pressed and event.shift_pressed:
+		open_chapters_shortcut()
+		get_viewport().set_input_as_handled()
+		return
 	match event.keycode:
 		KEY_ESCAPE:
 			_on_escape()
@@ -368,11 +371,16 @@ func _on_escape() -> void:
 		show_pause()
 
 
+## True while an item waits for its target: the player character can then be clicked too.
+func item_pending() -> bool:
+	return Adv.selected_item != ""
+
+
 ## Handles a click at a world position. Default: two-click style.
 func click_world(world_pos: Vector2, button: int, double: bool = false) -> void:
 	if not Adv.accepts_input():
 		return
-	var hs := Adv.hotspot_at(world_pos)
+	var hs := Adv.hotspot_at(world_pos, item_pending())
 	if button == MOUSE_BUTTON_RIGHT:
 		if Adv.selected_item != "":
 			Adv.select_item("")
@@ -626,21 +634,20 @@ func show_title() -> void:
 	title_mode = true
 	_title_bg.visible = true
 	_title_label.visible = not _title_image
-	_title_label.text = Adv.registry.game.title if Adv.registry.game.title != "" else str(ProjectSettings.get_setting("application/config/name"))
+	_title_label.text = tr(Adv.registry.game.title) if Adv.registry.game.title != "" else str(ProjectSettings.get_setting("application/config/name"))
 	get_tree().paused = false
 	Adv.fade(false, 0.0)
 	Adv.play_title_music()
 	var saves := Adv.list_saves()
 	var entries := [[tr("New game"), func():
 		_close_all_menus()
+		await Adv.play_intro()
 		Adv.new_game()]]
 	if not saves.is_empty():
 		entries.append([tr("Continue"), func():
 			_close_all_menus()
 			Adv.load_game(saves[0].slot)])
 		entries.append([tr("Load"), show_load_menu])
-	if not Adv.list_chapters().is_empty():
-		entries.append([tr("Chapters"), show_chapters_menu])
 	entries.append([tr("Settings"), show_settings])
 	if not OS.has_feature("web"):
 		entries.append([tr("Quit"), func(): get_tree().quit()])
@@ -684,12 +691,24 @@ func show_save_menu() -> void:
 	open_menu(tr("Save"), entries)
 
 
+## Developer shortcut (Ctrl+Shift+S): the chapter starts are not in the title menu, so players
+## don't skip the story; from the title screen or during the game this opens the list.
+func open_chapters_shortcut() -> void:
+	if Adv.list_chapters().is_empty():
+		return
+	if not _in_menu and not title_mode:
+		if not Adv.accepts_input():
+			return
+		show_pause()
+	show_chapters_menu()
+
+
 ## Starts the game from one of the chapter starts recorded by the walkthrough.
 func show_chapters_menu() -> void:
 	var entries := []
 	for c in Adv.list_chapters():
 		var path: String = c.path
-		entries.append([c.title, func():
+		entries.append([tr(c.title), func():
 			_close_all_menus()
 			Adv.load_chapter(path)])
 	entries.append([tr("Back"), _back])
@@ -714,7 +733,7 @@ func _slot_label(i: int, meta: Variant, slot: String = "") -> String:
 	var name := tr("Slot %d") % i if i > 0 else slot.capitalize()
 	if meta == null:
 		return "%s  -  %s" % [name, tr("empty")]
-	return "%s  -  %s  (%s)" % [name, meta.get("room_name", "?"), str(meta.get("time", "")).replace("T", " ").left(16)]
+	return "%s  -  %s  (%s)" % [name, tr(str(meta.get("room_name", "?"))), str(meta.get("time", "")).replace("T", " ").left(16)]
 
 
 func show_settings() -> void:
@@ -725,6 +744,9 @@ func show_settings() -> void:
 	vb.add_child(_slider(tr("Effects volume"), "sfx_volume", 0.0, 1.0))
 	if not OS.has_feature("web") and not OS.has_feature("mobile"):
 		vb.add_child(_check(tr("Fullscreen"), "fullscreen"))
+	var langs := Adv.languages()
+	if langs.size() > 1:
+		vb.add_child(_language_row(langs))
 	var back := Button.new()
 	back.text = tr("Back")
 	back.pressed.connect(_back)
@@ -749,6 +771,31 @@ func _slider(label: String, key: String, lo: float, hi: float) -> Control:
 	hb.add_child(l)
 	hb.add_child(s)
 	return hb
+
+
+## The game's languages (source + translation files); picking one relabels everything at once.
+func _language_row(langs: PackedStringArray) -> Control:
+	var hb := HBoxContainer.new()
+	var l := Label.new()
+	l.text = tr("Language")
+	l.custom_minimum_size.x = 220
+	var o := OptionButton.new()
+	for code in langs:
+		o.add_item(AdvI18n.language_name(code))
+	o.selected = maxi(0, Array(langs).find(Adv.language()))
+	o.item_selected.connect(func(i: int):
+		Adv.set_language(langs[i])
+		show_settings())
+	hb.add_child(l)
+	hb.add_child(o)
+	return hb
+
+
+## Relabels what was built once, after a language change (menus rebuild themselves when opened).
+func retranslate() -> void:
+	skip_hint.text = tr("Esc: skip")
+	if title_mode:
+		_title_label.text = tr(Adv.registry.game.title) if Adv.registry.game.title != "" else _title_label.text
 
 
 func _check(label: String, key: String) -> Control:
@@ -779,6 +826,37 @@ func show_toast(text: String) -> void:
 
 
 func _make_title_background() -> Control:
+	var bg := _make_title_picture()
+	_add_title_logo(bg)
+	return bg
+
+
+## A studio/author logo (game/title_logo.png...) drawn small in the top right corner of the title screen.
+const TITLE_LOGO_WIDTH := 120.0
+const TITLE_LOGO_MARGIN := 12.0
+
+func _add_title_logo(bg: Control) -> void:
+	for ext in ["png", "webp", "svg"]:
+		var p := "%s/title_logo.%s" % [Adv.game_dir, ext]
+		if not ResourceLoader.exists(p):
+			continue
+		var tex: Texture2D = load(p)
+		var logo := TextureRect.new()
+		logo.texture = tex
+		logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+		logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var h := TITLE_LOGO_WIDTH * tex.get_height() / tex.get_width()
+		logo.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		logo.offset_left = -TITLE_LOGO_WIDTH - TITLE_LOGO_MARGIN
+		logo.offset_right = -TITLE_LOGO_MARGIN
+		logo.offset_top = TITLE_LOGO_MARGIN
+		logo.offset_bottom = TITLE_LOGO_MARGIN + h
+		bg.add_child(logo)
+		return
+
+
+func _make_title_picture() -> Control:
 	var gd: String = Adv.game_dir
 	for ext in ["png", "jpg", "webp", "svg"]:
 		var p := "%s/title.%s" % [gd, ext]

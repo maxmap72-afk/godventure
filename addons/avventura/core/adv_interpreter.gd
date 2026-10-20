@@ -102,7 +102,7 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 	ctx.line = st.line
 	match st.k:
 		"say":
-			var text := AdvExpr.render_template(st.parts, ctx)
+			var text := _tr_template(st.text, st.parts, ctx)
 			await adv.say(st.who, text, st.mood, st.get("at"))
 		"if":
 			for b in st.branches:
@@ -167,7 +167,7 @@ func exec(st: Dictionary, ctx: Ctx) -> int:
 				# moving the controlled character to another room is a room change (like AGS)
 				await adv.change_room(st.room, loc if loc is String else "", loc if loc is Vector2 else null)
 			else:
-				adv.place(st.who, st.room, loc)
+				adv.place(st.who, st.room, loc, st.get("anywhere", false))
 		"control":
 			await adv.set_player(st.name)
 		"dialog":
@@ -302,6 +302,21 @@ func option_text(o: Dictionary, ctx: Ctx) -> String:
 		return text
 	var tpl := AdvExpr.parse_template(text)
 	return text if tpl.has("error") else AdvExpr.render_template(tpl.parts, ctx)
+
+
+## A speech line in the current language: the translation of its source text (same {expressions}),
+## parsed once and cached; the original parsed parts when there is none.
+var _tr_cache := {}
+func _tr_template(src: String, parts: Array, ctx: Ctx) -> String:
+	var text: String = adv.tr(src)
+	if text == src:
+		return AdvExpr.render_template(parts, ctx)
+	if not "{" in text:
+		return text
+	if not _tr_cache.has(text):
+		var tpl := AdvExpr.parse_template(text)
+		_tr_cache[text] = parts if tpl.has("error") else tpl.parts
+	return AdvExpr.render_template(_tr_cache[text], ctx)
 
 
 # --- functions ---------------------------------------------------------------------------

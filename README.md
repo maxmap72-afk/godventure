@@ -22,6 +22,12 @@ italiano, **Il Segreto del Faro** (`game/`), da giocare e da usare come esempio.
   i personaggi quando passano dietro, definiti con un poligono o con una maschera.
 - **Presentazione curata**: musica del menu iniziale, schermata d'avvio (es. un disclaimer),
   font del gioco anche pixel-art senza sfocature, menu "Scegli scena" per partire da un capitolo.
+- **Traduzioni come in AGS**: un file `.po` per lingua, creato e aggiornato da `adv.py i18n`,
+  lingua scelta dal giocatore nelle impostazioni e cambiata al volo.
+- **Musica alla iMuse**: i brani si dissolvono l'uno nell'altro e riprendono da dove erano rimasti;
+  passi sincronizzati con la camminata, video d'introduzione alla nuova partita.
+- **Mappe e sotterranei**: sentieri da seguire sulle mappe viste dall'alto e stanze buie che si
+  scoprono esplorando, con una luce attorno al personaggio.
 - **Zero codice per le cose semplici**: descrizione, oggetto da raccogliere e uscita si
   impostano dall'ispettore.
 - **Si prototipa senza grafica**: i personaggi senza sprite sono manichini animati disegnati

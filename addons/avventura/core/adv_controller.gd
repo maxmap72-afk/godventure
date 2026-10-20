@@ -438,7 +438,7 @@ func describe_scene(all: bool = false) -> String:
 		return "no room loaded"
 	var r: AdvRoom = adv.room
 	var s := r.get_size()
-	var lines := ["Room: %s \"%s\" (%dx%d)" % [adv.state.room, r.get_display_name(), s.x, s.y]]
+	var lines := ["Room: %s \"%s\" (%dx%d)" % [adv.state.room, adv.tr(r.get_display_name()), s.x, s.y]]
 	if adv.player:
 		var p: Vector2 = adv.player.room_position()
 		lines.append("Player: %s at (%d, %d)" % [adv.state.player, p.x, p.y])
@@ -655,6 +655,18 @@ func cli_lint() -> void:
 		print(AdvLinter.format(i))
 	print(AdvLinter.summary(issues))
 	quit(1 if AdvLinter.errors(issues) > 0 else 0)
+
+
+## --adv-strings=PATH: writes the translatable texts of the scripts as JSON (for tools/adv.py i18n).
+func cli_strings(path: String) -> void:
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		printerr("cannot write " + path)
+		quit(1)
+		return
+	f.store_string(JSON.stringify(AdvI18n.collect(adv.registry), "\t"))
+	f.close()
+	quit(0)
 
 
 ## --adv-scaffold=room:id[:Name] | character:id[:Name] | item:id[:Name]

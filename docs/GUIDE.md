@@ -66,6 +66,7 @@ game/
   gui/font.ttf|otf|fnt       the game's font (for example a pixel font: it is used without antialiasing)
   tests/*.advtest            automatic walkthroughs (tests)
   title.svg|png              background of the title menu (optional)
+  title_logo.png|svg         small logo in the top right corner of the title menu (optional)
   game.gd                    GDScript functions callable from scripts (optional)
 ```
 
@@ -131,6 +132,23 @@ Typical children:
 - **Hotspots and characters** – as direct children of the room they are depth-sorted by
   their Y (whoever is lower down stands in front). For things that are always in the
   foreground use a positive `z_index`.
+- **Footsteps** – the room's `footsteps` property is the sound of its floor (a file in
+  `audio/`, or variants `NAME_1`, `NAME_2`... picked at random): every walking character plays
+  it in time with the walk animation (on the first frame and halfway through the cycle), from
+  where it stands and more quietly when it is far away. `footsteps = false` on a character
+  makes it silent.
+- **Darkness** – an `AdvDarkness` node (a ColorRect, direct child of the room) covers the room
+  in darkness: only a circle of light is visible around the character in `lit_by` (empty = the
+  player, `-` = nobody, total darkness) and around its child Marker2D nodes (fixed lights,
+  radius in the `radius` metadata). The parts already lit stay dimly visible, so the map is
+  revealed by exploring; what has been seen is kept in the save.
+- **Trails (maps)** – `AdvWalkPath` nodes (Line2D): for map rooms seen from above, Monkey
+  Island style. If the room has at least one, characters walk only along the lines (joined
+  where they cross or where a vertex touches another line) and the walk areas are ignored. A
+  click leads to the nearest point of the trails; if that point is in a part that isn't
+  connected (a maze), the character stops at the closest reachable point and an unreachable
+  exit doesn't fire. The room's `walk_speed_scale` speeds up small figures. `enable`/`disable`
+  switch a trail on and off (a bridge that collapses...).
 - **Walk-behinds** – `AdvWalkBehind` nodes (like the *walk-behind areas* of AGS): a piece of
   the background (a column, a balustrade, the back of a seat) that is redrawn over the
   characters standing *behind* it. The piece is the polygon (drawn over the background with
@@ -260,6 +278,7 @@ on use worms on shovel:         # combining two items (works both ways round)
     nina: The shovel isn't hungry.
 on use key on door:             # an item on a hotspot
 on give worms to beppe:         # giving to a character (using an item on a character tries it too)
+on walk floor:                  # a click on the floor (before walking); `stop` cancels the walk
 ```
 
 ## 8. The AdvScript language
@@ -319,7 +338,7 @@ times this script has already run) and `first` (true the first time).
 | `enable` / `disable` | `disable door` · `enable bridge` | interactivity, walkable areas |
 | `state` | `state barrel open` · `state lighthouse lit in beach` | saved visual state |
 | `goto` | `goto lighthouse` · `goto pier at jetty` · `goto pier at 240, 350` | changes room (also to a precise point) |
-| `place` | `place beppe at barrel` · `place beppe in lighthouse at stairs` · `place beppe in lighthouse at 600, 500` | moves a character |
+| `place` | `place beppe at barrel` · `place beppe in lighthouse at stairs` · `place beppe in lighthouse at 600, 500` · `place beppe at -60, 500 anywhere` | moves a character (to the nearest walkable point; with `anywhere` exactly there, even off screen, so it can then walk in) |
 | `control` | `control beppe` | changes the player character |
 | `dialog` | `dialog beppe` | opens a dialog |
 | `option` | `option on beppe.worms` · `option off beppe.lighthouse` | enables/disables options |
@@ -337,6 +356,13 @@ times this script has already run) and `first` (true the first time).
 | `fade` | `fade out 1` · `fade in` | fade to black |
 | `print` | `print coins={coins}` | debug message |
 | `end_game` | `end_game` | end of the game (back to the menu) |
+
+**Music transitions (iMuse style).** The music never stops abruptly: when the track changes
+(from `music` or from a room's music) the old one fades out while the new one comes in, in
+`avventura/audio/music_fade` seconds (1.5); `music stop` fades out the same way. Going back
+to a track heard recently (within `avventura/audio/music_resume_seconds`, 3 minutes) resumes
+it where it was instead of starting over. Sounds still playing in the room being left
+(ambiences, loops) also fade out, in `avventura/audio/room_sound_fade` seconds.
 
 A complete example with almost everything:
 
@@ -455,6 +481,11 @@ door") and the inventory in a panel at the bottom. Right click performs the defa
 highlighted in the panel. Rooms designed for this interface should leave the bottom strip
 free (about 190 pixels), as in the original games; otherwise the camera scrolls above the
 panel. The verbs can be configured in the `verbs` property.
+An item that has both `on use ITEM:` and some `on use ITEM on ...:` (a suit to wash in the
+fountain and then to put on) waits for the second target ("Use Suit with"): a click on the
+same item or on the player character performs the use on its own. In every interface, while
+an item waits for its target, the player character can be clicked too: `on use ITEM on nina:`
+if it exists, otherwise `on use ITEM:`.
 
 **AGS style (icon bar).** As in the Adventure Game Studio templates: moving the mouse to the
 top of the screen reveals an icon bar (inventory, save, load, menu); the inventory is a
@@ -482,7 +513,8 @@ scenes (font sizes, colors, verbs) are changed in the inspector; `gui_theme` acc
 theme. For a brand-new interface (for example a "verb coin") extend `AdvGui` and override
 `click_world()`, `click_item()` and `hover_text()`, then set your scene in the settings.
 
-The title menu shows `game/title.svg|png` if it exists. The player can adjust the text
+The title menu shows `game/title.svg|png` if it exists, and `game/title_logo.png` (120 pixels
+wide) in the top right corner. The player can adjust the text
 speed, auto-advance, volumes and full screen (saved in `user://settings.cfg`).
 
 ## 11. Saving
@@ -504,8 +536,9 @@ expect room() == "car"
 checkpoint 02_car Shanghai - The escape in the Duesenberg
 ```
 
-If the `scene/` folder contains these files, the title menu shows **Chapters**: choosing a
-title restarts from there, with items, variables and characters exactly as in a real game,
+If the `scene/` folder contains these files, **Ctrl+Shift+S** (in the title menu or while
+playing) opens the **Chapters** list; the entry doesn't appear in the menus, so the player
+doesn't skip the story. Choosing a title restarts from there, with items, variables and characters exactly as in a real game,
 and the room's entrance (its opening scene) runs again. The files are regenerated every time
 the tests run; from the console you can try one with `chapter ID`.
 
@@ -653,7 +686,12 @@ lint, the tests, a playthrough and a screenshot.
 | `avventura/general/game_dir` | `res://game` | game folder |
 | `avventura/gui/scene` | `two_click_gui.tscn` | interface |
 | `avventura/gui/show_title_menu` | `true` | title menu |
-| `avventura/gui/language` | `""` | interface language (`it`, `en`; empty = the system's) |
+| `avventura/general/source_language` | `it` | language the game's texts are written in |
+| `avventura/general/intro_video` | `""` | video (in `game/video/`) shown on every *New game* from the title menu; it can't be skipped |
+| `avventura/audio/music_fade` | `1.5` | seconds of crossfade between two tracks |
+| `avventura/audio/music_resume_seconds` | `180` | a track played again within this time continues where it was |
+| `avventura/audio/room_sound_fade` | `1.0` | seconds of fade-out for the sounds of the room being left |
+| `avventura/gui/language` | `""` | starting language (`it`, `en`...; empty = the system's, if the game has it) |
 | `avventura/text/seconds_per_character` | `0.05` | duration of the lines |
 | `avventura/text/min_seconds` | `1.5` | minimum duration of a line |
 | `avventura/interaction/walk_before_look` | `false` | walk up to things before looking at them |
@@ -669,9 +707,28 @@ lint, the tests, a playthrough and a screenshot.
 the package by itself. The `tests/` and `tools/` folders aren't needed by the game: you can
 exclude them in the export filters.
 
-**Translations.** All the text that is shown goes through `tr()`: with Godot's normal
-translation files (CSV or PO) you can translate lines, names and options, using the original
-text as the key. The interface texts are already in English and Italian
+**Translations.** As in AGS, each language is a translation file: `game/lang/<code>.po`
+(gettext format, it opens in any PO editor such as Poedit, or in a text editor). Each text
+has the original (`msgid`) and the translation (`msgstr`); an empty translation leaves the
+original text. The file is created and updated with:
+
+```sh
+python3 tools/adv.py i18n en      # creates or updates game/lang/en.po
+```
+
+It collects everything the player reads: lines (also `char@X,Y:`), dialog options, names
+and descriptions of items and characters, the title, the names and descriptions of the
+hotspots in the scenes, chapter titles and the texts in the game's GDScript files
+(`tr("...")` and the "Name: text" lines of mini-games). Translations already done are kept;
+texts gone from the game end up at the bottom as obsolete (`#~`). Run it again after every
+change to the texts: new lines will have an empty translation. The `{expressions}` of the
+lines must be copied as they are into the translation.
+
+The player chooses the language in *Settings → Language* (it appears when there is at least
+one translation) and the choice is saved; it switches live, without restarting. To try it:
+`python3 tools/adv.py play "..." --lang en`, `shot ... --lang en`, `run --lang en`, or
+`--adv-lang=en` to Godot. Tests (`.advtest`) always run in the original language.
+The interface texts are already in English and Italian
 (`addons/avventura/i18n/avventura.csv`); add a column for other languages.
 
 ## 17. Importing an AGS game

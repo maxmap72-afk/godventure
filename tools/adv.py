@@ -17,6 +17,7 @@ Godot 4.4+ (set the GODOT environment variable if `godot` is not in your PATH).
   python3 tools/adv.py new-character ID ["Name"] [COLOR]
   python3 tools/adv.py new-item ID ["Name"]
   python3 tools/adv.py import                     (re)import assets, needed after adding art
+  python3 tools/adv.py i18n LOCALE                create/update the translation GAME/lang/LOCALE.po
 """
 import argparse
 import json
@@ -118,6 +119,8 @@ def cmd_play(a):
         args.append("--adv-load=" + str(save))
     if a.room:
         args.append("--adv-start=" + a.room)
+    if a.lang:
+        args.append("--adv-lang=" + a.lang)
     code, out = godot(args)
     print(out)
     return code
@@ -132,6 +135,8 @@ def cmd_shot(a):
         args.append("--adv-load=" + str(save))
     if a.gui:
         args.append("--adv-gui=" + a.gui)
+    if a.lang:
+        args.append("--adv-lang=" + a.lang)
     code, text = godot(args, headless=False)
     print(text)
     return code
@@ -165,6 +170,8 @@ def cmd_run(a):
         cmd.append("--adv-start=" + a.room)
     if a.gui:
         cmd.append("--adv-gui=" + a.gui)
+    if a.lang:
+        cmd.append("--adv-lang=" + a.lang)
     print("[adv] starting the game with remote control on port %d" % a.port)
     subprocess.Popen(cmd)
     return 0
@@ -182,17 +189,20 @@ def main():
     p.add_argument("--session", default="default")
     p.add_argument("--new", action="store_true", help="start a new game")
     p.add_argument("--room", help="start a new game in this room (with --new)")
+    p.add_argument("--lang", help="language (a translation in GAME/lang/)")
     s = sub.add_parser("shot", help="take a screenshot")
     s.add_argument("out")
     s.add_argument("commands", nargs="?")
     s.add_argument("--session", default="default")
     s.add_argument("--gui", help="two_click or scumm")
+    s.add_argument("--lang", help="language (a translation in GAME/lang/)")
     lv = sub.add_parser("live", help="send a command to a running game")
     lv.add_argument("command")
     lv.add_argument("--port", type=int, default=7777)
     r = sub.add_parser("run", help="start the game in a window with remote control")
     r.add_argument("--room")
     r.add_argument("--gui")
+    r.add_argument("--lang")
     r.add_argument("--port", type=int, default=7777)
     for kind in ("room", "character", "item"):
         n = sub.add_parser("new-" + kind, help="create a " + kind)
@@ -201,6 +211,8 @@ def main():
         if kind == "character":
             n.add_argument("color", nargs="?", default="")
     sub.add_parser("import", help="import assets")
+    tl = sub.add_parser("i18n", help="create/update a translation file (GAME/lang/LOCALE.po)")
+    tl.add_argument("locale")
     a = ap.parse_args()
 
     if a.cmd == "lint":
@@ -228,6 +240,10 @@ def main():
         if code == 0:
             ensure_imported()
         return code
+    if a.cmd == "i18n":
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import i18n
+        return i18n.run(ROOT, godot, a.locale)
     if a.cmd == "import":
         (ROOT / ".godot" / ".adv_import_stamp").unlink(missing_ok=True)
         ensure_imported()

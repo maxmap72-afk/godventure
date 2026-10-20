@@ -191,7 +191,7 @@ func _sentence() -> String:
 func click_world(world_pos: Vector2, button: int, double: bool = false) -> void:
 	if not Adv.accepts_input():
 		return
-	var hs := Adv.hotspot_at(world_pos)
+	var hs := Adv.hotspot_at(world_pos, item_pending())
 	if button == MOUSE_BUTTON_RIGHT:
 		if hs:
 			Adv.perform(hs.get_default_verb(), hs.get_id())
@@ -225,6 +225,8 @@ func click_item(item: String, button: int) -> void:
 	if first_item != "":
 		if item != first_item:
 			Adv.perform(verb, item, first_item)
+		elif _use_alone(item):
+			return
 		_reset_verb()
 		return
 	var alone := not Adv.registry.find_handler(Adv.state.room, verb, item, "", false).is_empty()
@@ -236,7 +238,28 @@ func click_item(item: String, button: int) -> void:
 	_reset_verb()
 
 
+## An item that also combines with things (smoking on fontana) still has its own "use ITEM": the
+## player reaches it by picking the item again (or "use ITEM with" their own character, see
+## Adv.perform). False if there is none.
+func item_pending() -> bool:
+	return first_item != ""
+
+
+func _use_alone(item: String) -> bool:
+	if verb != "use" or Adv.registry.find_handler(Adv.state.room, "use", item, "", false).is_empty():
+		return false
+	_reset_verb()
+	Adv.perform("use", item)
+	return true
+
+
 func _on_cutscene_changed(active: bool) -> void:
 	super(active)
 	if active:
 		_reset_verb()
+
+
+func retranslate() -> void:
+	super()
+	for v in verb_buttons:
+		verb_buttons[v].text = tr(VERB_LABELS.get(v, v.capitalize()))

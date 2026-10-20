@@ -34,6 +34,8 @@ signal movement_finished(reached: bool)
 ## When idle, now and then play one of the sprite's "fidget" animations (fidget, fidget2,
 ## fidget3, with the usual _down/_side/_left/_right variants), so nobody stands frozen.
 @export var fidgets := true
+## Footstep sounds while walking (the room's `footsteps` sound), in time with the walk cycle.
+@export var footsteps := true
 
 @export_group("Placeholder look")
 @export var body_color := Color(0.25, 0.55, 0.85):
@@ -51,7 +53,11 @@ var _t := 0.0
 var _custom_anim := ""
 var _sprite: AnimatedSprite2D
 var _base_scale := Vector2.ONE
+## True while a scripted move (a jump, a fall) should keep the current size instead of the
+## room's perspective scale.
+var scale_locked := false
 var _fidget_t := randf_range(2.0, 9.0)
+var _step_dist := 0.0
 
 
 func _init() -> void:
@@ -71,6 +77,8 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		_update_scale()
 		_update_anim()
+		if _sprite:
+			_sprite.frame_changed.connect(_on_frame_changed)
 
 
 func get_default_verb() -> String:
@@ -152,11 +160,11 @@ func stop() -> void:
 		_finish(false)
 
 
-## Moves instantly (clamped to the walkable area).
-func teleport(p: Vector2) -> void:
+## Moves instantly (clamped to the walkable area unless `anywhere`).
+func teleport(p: Vector2, anywhere: bool = false) -> void:
 	stop()
 	var room := _room()
-	set_room_position(room.closest_walkable(p) if room else p)
+	set_room_position(room.closest_walkable(p) if room and not anywhere else p)
 
 
 func face_towards(global_point: Vector2) -> void:
@@ -203,7 +211,7 @@ func _process(delta: float) -> void:
 
 func _advance(delta: float) -> void:
 	var room := _room()
-	var s := room.scale_at(room_position().y) if room else 1.0
+	var s := room.scale_at(room_position().y) * room.walk_speed_scale if room else 1.0
 	var budget := walk_speed * s * delta
 	var pos := room_position()
 	while budget > 0.0 and _path_i < _path.size():
@@ -219,12 +227,35 @@ func _advance(delta: float) -> void:
 		else:
 			pos += to / dist * budget
 			budget = 0.0
+	if _sprite == null:   # placeholder puppet: a step every stride
+		_step_dist += pos.distance_to(room_position())
+		if _step_dist > 60.0 * s:
+			_step_dist = 0.0
+			_footstep()
 	set_room_position(pos)
 	if _path_i >= _path.size():
 		_finish(true)
 
 
+## Walk cycles put a foot down on their first frame and halfway through.
+func _on_frame_changed() -> void:
+	if not is_walking or not String(_sprite.animation).begins_with("walk"):
+		return
+	var n := _sprite.sprite_frames.get_frame_count(_sprite.animation)
+	if n >= 2 and (_sprite.frame == 0 or _sprite.frame == n / 2):
+		_footstep()
+
+
+func _footstep() -> void:
+	if footsteps and is_visible_in_tree():
+		var adv := get_node_or_null("/root/Adv")
+		if adv:
+			adv.footstep(self)
+
+
 func _update_scale() -> void:
+	if scale_locked:
+		return
 	var room := _room()
 	if room:
 		var s := room.scale_at(room_position().y)

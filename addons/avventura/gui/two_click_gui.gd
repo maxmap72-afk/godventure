@@ -81,3 +81,9 @@ func _process(delta: float) -> void:
 	inv_handle.visible = usable and _slide < 0.5
 	inv_handle.position = Vector2((vs.x - inv_handle.size.x) / 2.0, vs.y - inv_handle.size.y)
 	inv_handle.modulate.a = 0.55 if not inv_handle.is_hovered() else 1.0
+
+
+func retranslate() -> void:
+	super()
+	if inv_handle:
+		inv_handle.text = "▲ " + tr("Inventory")

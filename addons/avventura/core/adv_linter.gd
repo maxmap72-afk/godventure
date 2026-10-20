@@ -86,6 +86,12 @@ func _run() -> void:
 			continue
 		if info.areas.is_empty():
 			_add(scene_path, 0, "warning", "room '%s' has no AdvWalkArea: characters can walk anywhere" % rid)
+		if info.size != Vector2.ZERO:
+			var bounds := Rect2(Vector2(-40, -40), info.size + Vector2(80, 80))
+			for hid in info.walk_points:
+				var wp: Vector2 = info.walk_points[hid]
+				if not bounds.has_point(wp):
+					_add(scene_path, 0, "warning", "hotspot '%s': walk point %s (position + walk_to) is outside the room; walk_to is relative to the hotspot" % [hid, wp])
 		for hid in info.hotspots:
 			var h: Dictionary = info.hotspots[hid]
 			if h.exit_to != "":
@@ -152,6 +158,8 @@ func _check_handler(h: Dictionary, scope: String) -> void:
 		elif h.verb == "start" and scope != "":
 			_add(h.file, h.line, "warning", "'on start:' only works in a global script such as game.adv")
 		return
+	if h.verb == "walk" and h.target == "floor" and h.item == "":
+		return   # `on walk floor:` runs on floor clicks (Adv.walk_player)
 	for id in [h.target, h.item]:
 		if id == "" or id == "*":
 			continue
@@ -429,7 +437,7 @@ func _game_file() -> String:
 
 func _scan_rooms() -> void:
 	for rid in reg.rooms:
-		var info := {"hotspots": {}, "markers": {}, "areas": {}, "methods": {}}
+		var info := {"hotspots": {}, "markers": {}, "areas": {}, "methods": {}, "walk_points": {}, "size": Vector2.ZERO}
 		rooms[rid] = info
 		var scene = load(reg.rooms[rid])
 		if not scene is PackedScene:
@@ -450,10 +458,15 @@ func _scan_rooms() -> void:
 
 func _scan_node(n: Node, info: Dictionary) -> void:
 	for c in n.get_children():
+		if c is AdvHotspot and not c is AdvCharacter and n.get_parent() == null and c.walk_before \
+				and c.get_node_or_null("WalkTo") == null:
+			info.walk_points[c.get_id()] = c.position + c.walk_to
+		if c is Sprite2D and String(c.name) == "Background" and c.texture:
+			info.size = c.texture.get_size()
 		if c is AdvHotspot:
 			info.hotspots[c.get_id()] = {"exit_to": c.exit_to, "exit_entry": c.exit_entry, "pickup_item": c.pickup_item,
 				"is_character": c is AdvCharacter, "verb": c.get_default_verb(), "description": c.description}
-		elif c is AdvWalkArea:
+		elif c is AdvWalkArea or c is AdvWalkPath:
 			info.areas[c.get_area_id()] = true
 			info.areas[String(c.name)] = true
 		elif c is AdvRegion:
