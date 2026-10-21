@@ -53,7 +53,9 @@ func _parse(text: String, path: String) -> Dictionary:
 # --- structure ---------------------------------------------------------------------
 
 func _build_tree(text: String) -> Array:
-	if text.begins_with("﻿"):
+	# a byte order mark (U+FEFF) left by some editors; written as a code, not as a literal
+	# character in a string, which can get lost when the script is exported
+	if not text.is_empty() and text.unicode_at(0) == 0xFEFF:
 		text = text.substr(1)
 	var root := {"indent": -1, "children": []}
 	var stack: Array = [root]

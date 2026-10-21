@@ -18,6 +18,8 @@ Godot 4.4+ (set the GODOT environment variable if `godot` is not in your PATH).
   python3 tools/adv.py new-item ID ["Name"]
   python3 tools/adv.py import                     (re)import assets, needed after adding art
   python3 tools/adv.py i18n LOCALE                create/update the translation GAME/lang/LOCALE.po
+  python3 tools/adv.py export [PRESET ...]        build the presets of export_presets.cfg (all by
+                                                  default) into their export paths
 """
 import argparse
 import json
@@ -177,6 +179,45 @@ def cmd_run(a):
     return 0
 
 
+def export_presets():
+    """The presets in export_presets.cfg as [(name, export_path)]."""
+    cfg = ROOT / "export_presets.cfg"
+    if not cfg.exists():
+        return []
+    out, name = [], None
+    for line in cfg.read_text(encoding="utf-8").splitlines():
+        if line.startswith("[preset.") and not line.endswith(".options]"):
+            name = None
+        elif line.startswith("name=") and name is None:
+            name = line[5:].strip('"')
+        elif line.startswith("export_path=") and name:
+            out.append((name, line[12:].strip('"')))
+    return out
+
+
+def cmd_export(a):
+    presets = export_presets()
+    if not presets:
+        sys.exit("No export_presets.cfg: create the presets in Godot (Project > Export).")
+    chosen = [p for p in presets if not a.presets or p[0] in a.presets]
+    unknown = set(a.presets) - {p[0] for p in presets}
+    if unknown:
+        sys.exit("Unknown preset(s): %s (there are: %s)" % (", ".join(sorted(unknown)), ", ".join(p[0] for p in presets)))
+    failed = 0
+    for name, path in chosen:
+        (ROOT / path).parent.mkdir(parents=True, exist_ok=True)
+        code, out = godot(["--export-release", name, path], timeout=1800)
+        errors = [l for l in out.splitlines() if l.startswith("ERROR") and "still in use" not in l]
+        if code == 0 and (ROOT / path).exists():
+            print("ok    %-10s %s" % (name, path))
+        else:
+            failed += 1
+            print("FAIL  %-10s %s" % (name, path))
+            for l in errors[:5] + [l for l in out.splitlines() if "configuration errors" in l][:1]:
+                print("      " + l)
+    return 1 if failed else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description="Avventura command line", formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__)
@@ -213,6 +254,8 @@ def main():
     sub.add_parser("import", help="import assets")
     tl = sub.add_parser("i18n", help="create/update a translation file (GAME/lang/LOCALE.po)")
     tl.add_argument("locale")
+    ex = sub.add_parser("export", help="build the export presets (export_presets.cfg)")
+    ex.add_argument("presets", nargs="*", help="preset names (default: all)")
     a = ap.parse_args()
 
     if a.cmd == "lint":
@@ -244,6 +287,8 @@ def main():
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import i18n
         return i18n.run(ROOT, godot, a.locale)
+    if a.cmd == "export":
+        return cmd_export(a)
     if a.cmd == "import":
         (ROOT / ".godot" / ".adv_import_stamp").unlink(missing_ok=True)
         ensure_imported()

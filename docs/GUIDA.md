@@ -709,8 +709,16 @@ verifica con lint, test, una partita e uno screenshot.
 ## 16. Esportare e tradurre
 
 **Esportazione.** Usa il normale *Progetto → Esporta* di Godot. Il plugin aggiunge da solo i
-file `.adv` al pacchetto. Le cartelle `tests/` e `tools/` non servono al gioco: puoi
-escluderle nei filtri dell'esportazione.
+file `.adv` al pacchetto (le traduzioni `.po` e i capitoli `scene/*.json` Godot li include già
+come risorse). Le cartelle `tests/` e `tools/` non servono al gioco: puoi escluderle nei filtri
+dell'esportazione (*Filtri per escludere file*: `tests/*, tools/*, docs/*`).
+
+Una volta creati i preset (salvati in `export_presets.cfg`) e installati i modelli di
+esportazione di Godot (*Editor → Gestisci modelli di esportazione*), puoi ricostruire tutto da
+terminale: `python3 tools/adv.py export` esporta ogni preset nel suo percorso, `python3
+tools/adv.py export Windows Web` solo quelli indicati. Per il Web scegli la variante senza
+thread (*Thread Support* spento): il gioco gira anche su un normale hosting statico, senza
+intestazioni speciali.
 
 **Traduzioni.** Come in AGS, ogni lingua è un file di traduzione: `game/lang/<codice>.po`
 (formato gettext, si apre con qualunque editor PO come Poedit, o con un editor di testo).

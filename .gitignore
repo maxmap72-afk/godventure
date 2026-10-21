@@ -11,3 +11,6 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Exported builds (python3 tools/adv.py export)
+build/

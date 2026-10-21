@@ -714,8 +714,15 @@ lint, the tests, a playthrough and a screenshot.
 ## 16. Exporting and translating
 
 **Exporting.** Use Godot's normal *Project → Export*. The plugin adds the `.adv` files to
-the package by itself. The `tests/` and `tools/` folders aren't needed by the game: you can
-exclude them in the export filters.
+the package by itself (Godot already includes the `.po` translations and the `scene/*.json`
+chapter starts as resources). The `tests/` and `tools/` folders aren't needed by the game: you
+can exclude them in the export filters (*Filters to exclude files*: `tests/*, tools/*, docs/*`).
+
+Once the presets exist (saved in `export_presets.cfg`) and Godot's export templates are
+installed (*Editor → Manage Export Templates*), you can rebuild everything from a terminal:
+`python3 tools/adv.py export` exports every preset to its path, `python3 tools/adv.py export
+Windows Web` only the ones named. For the Web pick the variant without threads (*Thread
+Support* off): the game then runs on any plain static hosting, with no special headers.
 
 **Translations.** As in AGS, each language is a translation file: `game/lang/<code>.po`
 (gettext format, it opens in any PO editor such as Poedit, or in a text editor). Each text

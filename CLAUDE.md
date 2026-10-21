@@ -22,6 +22,7 @@ python3 tools/adv.py shot /tmp/s.png "gui show_pause" --gui scumm   # menus / ot
 python3 tools/adv.py new-room ID "Name" | new-character ID "Name" "#ffcc00" | new-item ID "Name"
 python3 tools/adv.py import                      # after adding/changing art
 python3 tools/adv.py i18n en                     # create/update the translation game/lang/en.po
+python3 tools/adv.py export [PRESET ...]         # build the export presets (export_presets.cfg) into build/...
 python3 tools/adv.py play "look cartello" --lang en   # play/shot/run in a translation
 ```
 
