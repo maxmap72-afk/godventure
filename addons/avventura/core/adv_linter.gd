@@ -69,6 +69,8 @@ func _run() -> void:
 			_add(game_file, 0, "error", "start room '%s' does not exist%s" % [reg.game.start, _hint(reg.game.start, reg.rooms.keys())])
 		elif reg.game.start_at != "" and not _has_marker(reg.game.start, reg.game.start_at):
 			_add(game_file, 0, "error", "room '%s' has no entry '%s'" % [reg.game.start, reg.game.start_at])
+	if reg.game.score != "" and not reg.vars.any(func(v): return v.name == reg.game.score):
+		_add(game_file, 0, "error", "score variable '%s' is not declared: add 'var %s = 0'" % [reg.game.score, reg.game.score])
 	# Characters
 	for id in reg.characters:
 		var c: Dictionary = reg.characters[id]

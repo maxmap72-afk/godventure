@@ -5,7 +5,7 @@ extends EditorSyntaxHighlighter
 
 const BLOCK_WORDS := ["on", "dialog", "function", "option", "if", "elif", "else", "while",
 	"cutscene", "bg", "random", "cycle", "sequence", "once", "do"]
-const DECL_WORDS := ["var", "item", "character", "title", "player", "start"]
+const DECL_WORDS := ["var", "item", "character", "title", "player", "start", "score"]
 const STMT_WORDS := ["set", "walk", "face", "anim", "wait", "inventory", "pickup", "show", "hide",
 	"enable", "disable", "state", "goto", "place", "control", "end", "back", "stop", "call",
 	"sound", "music", "video", "camera", "fade", "print", "end_game", "expect", "choose", "skip", "scene"]

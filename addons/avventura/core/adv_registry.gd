@@ -23,7 +23,7 @@ var items: Dictionary = {}
 var characters: Dictionary = {}
 ## [{name, expr, line, file}]
 var vars: Array = []
-var game: Dictionary = {"title": "", "player": "", "start": "", "start_at": ""}
+var game: Dictionary = {"title": "", "player": "", "start": "", "start_at": "", "score": "", "score_max": 0}
 ## room_id -> scene path
 var rooms: Dictionary = {}
 ## Full-screen overlays (game/overlays/<id>.tscn), shown with `show ID` (like AGS GUIs).
@@ -48,7 +48,7 @@ func load_game(dir: String) -> void:
 	overlays.clear()
 	verbs.clear()
 	issues.clear()
-	game = {"title": "", "player": "", "start": "", "start_at": ""}
+	game = {"title": "", "player": "", "start": "", "start_at": "", "score": "", "score_max": 0}
 	for v in STANDARD_VERBS:
 		verbs[v] = true
 	_discover_rooms()
@@ -118,6 +118,9 @@ func load_file(path: String) -> void:
 			"start":
 				game.start = d.room
 				game.start_at = d.at
+			"score":
+				game.score = d.var
+				game.score_max = d.max
 
 
 static func handler_key(verb: String, item: String, target: String) -> String:

@@ -527,7 +527,7 @@ func _draw_hints() -> void:
 # --- menus -------------------------------------------------------------------------------------
 
 ## entries: [[label, Callable or null], ...]
-func open_menu(title: String, entries: Array) -> VBoxContainer:
+func open_menu(title: String, entries: Array, subtitle := "") -> VBoxContainer:
 	_in_menu = true
 	menu_layer.visible = true
 	_dim.color.a = 0.12 if title_mode else 0.55
@@ -563,6 +563,12 @@ func open_menu(title: String, entries: Array) -> VBoxContainer:
 		tl.add_theme_font_size_override("font_size", font_size + 6)
 		tl.add_theme_color_override("font_color", accent_color)
 		outer.add_child(tl)
+	if subtitle != "":
+		var sl := Label.new()
+		sl.text = subtitle
+		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sl.add_theme_font_size_override("font_size", font_size)
+		outer.add_child(sl)
 	# Long lists (e.g. chapter starts) scroll instead of running off the screen.
 	var max_h := get_viewport().get_visible_rect().size.y * (0.46 if corner else 0.7)
 	if entries.size() * (font_size + 26 + gap) > max_h:
@@ -666,7 +672,8 @@ func show_pause() -> void:
 		[tr("Main menu"), show_title]]
 	if not OS.has_feature("web"):
 		entries.append([tr("Quit"), func(): get_tree().quit()])
-	open_menu(tr("Pause"), entries)
+	var score := Adv.score()
+	open_menu(tr("Pause"), entries, tr("Score: %d of %d") % score if not score.is_empty() else "")
 
 
 func _back() -> void:

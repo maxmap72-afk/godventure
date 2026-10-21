@@ -294,6 +294,7 @@ title "Il Segreto del Faro"        # titolo del gioco
 player nina                        # protagonista
 start spiaggia at default          # stanza (e punto) iniziale
 var monete = 0                     # variabile con il suo valore iniziale
+score punti 50                     # facoltativo: punteggio (variabile, massimo), nel menu di pausa
 item ... / character ...           # dichiarazioni (vedi sopra)
 
 on EVENTO:                         # start (in game.adv), enter/setup/exit (stanze)
@@ -302,6 +303,11 @@ on VERBO OGGETTO on BERSAGLIO:     # on use chiave on porta:  (anche with / to /
 dialog NOME:                       # vedi capitolo 9
 function NOME(parametri):          # sequenze riutilizzabili: call NOME(valori)
 ```
+
+**Punteggio.** Con `score punti 50` (dopo `var punti = 0`) il menu di pausa mostra
+«Punteggio: 12 su 50»; i punti si danno con `set punti += 2`. Da GDScript, `Adv.score()`
+restituisce `[punti, massimo]` (vuoto se il gioco non tiene il punteggio), per esempio per i
+titoli di coda.
 
 **Verbi.** Quelli standard sono `walk`, `look`, `use`, `talk`, `pick`, `open`, `close`,
 `push`, `pull`, `give`; puoi inventarne altri (`on lick francobollo:`) e usarli come verbo

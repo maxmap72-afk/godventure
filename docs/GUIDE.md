@@ -299,6 +299,7 @@ title "The Secret of the Lighthouse"   # title of the game
 player nina                            # player character
 start beach at default                 # starting room (and point)
 var coins = 0                          # variable with its initial value
+score points 50                        # optional: score (variable, most points), in the pause menu
 item ... / character ...               # declarations (see above)
 
 on EVENT:                              # start (in game.adv), enter/setup/exit (rooms)
@@ -307,6 +308,10 @@ on VERB ITEM on TARGET:                # on use key on door:  (also with / to / 
 dialog NAME:                           # see chapter 9
 function NAME(parameters):             # reusable sequences: call NAME(values)
 ```
+
+**Score.** With `score points 50` (after `var points = 0`) the pause menu shows
+"Score: 12 of 50"; points are given with `set points += 2`. From GDScript, `Adv.score()`
+returns `[points, most]` (empty if the game keeps no score), for example for the end credits.
 
 **Verbs.** The standard ones are `walk`, `look`, `use`, `talk`, `pick`, `open`, `close`,
 `push`, `pull`, `give`; you can invent others (`on lick stamp:`) and use them as the default

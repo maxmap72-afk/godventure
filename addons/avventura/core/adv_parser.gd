@@ -92,7 +92,7 @@ func _parse_top(node: Dictionary) -> void:
 			_parse_var(node, text)
 		"item", "character":
 			_parse_entity(node, text, word)
-		"title", "player", "start":
+		"title", "player", "start", "score":
 			_parse_game_decl(node, text, word)
 		_:
 			if _try_say(node.text, node.line) != null:
@@ -315,6 +315,12 @@ func _parse_game_decl(node: Dictionary, text: String, word: String) -> void:
 				_err(node.line, "expected: start ROOM [at ENTRY]")
 				return
 			_out.decls.append(d)
+		"score":
+			var w := _split_ws(rest)
+			if w.size() != 2 or not AdvExpr.is_ident(w[0]) or not w[1].is_valid_int() or int(w[1]) <= 0:
+				_err(node.line, "expected: score VAR MAX (the variable holding the score, the most points there are)")
+				return
+			_out.decls.append({"k": "score", "var": w[0], "max": int(w[1]), "line": node.line, "file": _path})
 
 
 # --- statements --------------------------------------------------------------------

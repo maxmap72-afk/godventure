@@ -1198,6 +1198,14 @@ func get_var(name: String) -> Variant:
 	return state.vars.get(name, null)
 
 
+## The score kept by the game's `score VAR MAX` declaration as [points, most points], or [] when
+## the game keeps no score. Shown in the pause menu.
+func score() -> Array:
+	if registry.game.score == "":
+		return []
+	return [int(get_var(registry.game.score) if get_var(registry.game.score) != null else 0), int(registry.game.score_max)]
+
+
 func set_var(name: String, value: Variant) -> void:
 	state.vars[name] = value
 

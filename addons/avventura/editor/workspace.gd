@@ -11,7 +11,7 @@ const GUIS := {
 	"ags": "res://addons/avventura/gui/ags_gui.tscn",
 }
 const KEYWORDS := ["on", "dialog", "option", "function", "var", "item", "character", "title",
-	"player", "start", "if", "elif", "else", "while", "set", "walk", "face", "anim", "wait",
+	"player", "start", "score", "if", "elif", "else", "while", "set", "walk", "face", "anim", "wait",
 	"inventory", "pickup", "show", "hide", "enable", "disable", "state", "goto", "place",
 	"control", "end", "back", "stop", "call", "cutscene", "bg", "random", "cycle", "sequence",
 	"once", "do", "sound", "music", "camera", "fade", "print", "end_game", "narrator", "and",

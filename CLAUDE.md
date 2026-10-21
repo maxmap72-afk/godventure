@@ -119,7 +119,7 @@ dialog beppe:
         beppe: Che ti serve?
     option faro "Il faro è spento" once|hidden|silent if COND:
         ...
-Top level: title "..", player id, start room [at entry], var x = 0,
+Top level: title "..", player id, start room [at entry], var x = 0, score VAR MAX (pause menu),
            item id "Name"[:  props], character id "Name"[: color/body/hair/room/at/pos/speed/scale/anim_speed/...]
 Expressions: and or not == != < > + - * / in; has(item) visited(room) state(obj) shown(obj)
              room() player() used(dialog.opt) room_of(char) name(id) random(a,b) chance(pct)
