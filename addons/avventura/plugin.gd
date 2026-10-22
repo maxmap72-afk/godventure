@@ -6,14 +6,14 @@ extends EditorPlugin
 const Workspace := preload("res://addons/avventura/editor/workspace.gd")
 const Highlighter := preload("res://addons/avventura/editor/adv_syntax_highlighter.gd")
 const ExportPlugin := preload("res://addons/avventura/editor/export_plugin.gd")
-const TRANSLATIONS := ["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation"]
+const TRANSLATIONS := ["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation", "res://addons/avventura/i18n/avventura.de.translation", "res://addons/avventura/i18n/avventura.es.translation", "res://addons/avventura/i18n/avventura.fr.translation"]
 
 ## [name, default, type, hint, hint_string]
 const SETTINGS := [
 	["avventura/general/game_dir", "res://game", TYPE_STRING, PROPERTY_HINT_DIR, ""],
 	["avventura/gui/scene", "res://addons/avventura/gui/two_click_gui.tscn", TYPE_STRING, PROPERTY_HINT_FILE, "*.tscn"],
 	["avventura/gui/show_title_menu", true, TYPE_BOOL, PROPERTY_HINT_NONE, ""],
-	["avventura/gui/language", "", TYPE_STRING, PROPERTY_HINT_ENUM_SUGGESTION, "en,it"],
+	["avventura/gui/language", "", TYPE_STRING, PROPERTY_HINT_ENUM_SUGGESTION, "en,it,de,es,fr"],
 	["avventura/text/seconds_per_character", 0.05, TYPE_FLOAT, PROPERTY_HINT_RANGE, "0.01,0.2,0.005"],
 	["avventura/text/min_seconds", 1.5, TYPE_FLOAT, PROPERTY_HINT_RANGE, "0.5,5,0.1"],
 	["avventura/interaction/walk_before_look", false, TYPE_BOOL, PROPERTY_HINT_NONE, ""],

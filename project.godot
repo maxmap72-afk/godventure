@@ -47,7 +47,7 @@ enabled=PackedStringArray("res://addons/avventura/plugin.cfg")
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation")
+locale/translations=PackedStringArray("res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation", "res://addons/avventura/i18n/avventura.de.translation", "res://addons/avventura/i18n/avventura.es.translation", "res://addons/avventura/i18n/avventura.fr.translation")
 
 [rendering]
 

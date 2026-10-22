@@ -745,7 +745,7 @@ The player chooses the language in *Settings → Language* (it appears when ther
 one translation) and the choice is saved; it switches live, without restarting. To try it:
 `python3 tools/adv.py play "..." --lang en`, `shot ... --lang en`, `run --lang en`, or
 `--adv-lang=en` to Godot. Tests (`.advtest`) always run in the original language.
-The interface texts are already in English and Italian
+The interface texts are already in English, Italian, German, Spanish and French
 (`addons/avventura/i18n/avventura.csv`); add a column for other languages.
 
 ## 17. Importing an AGS game

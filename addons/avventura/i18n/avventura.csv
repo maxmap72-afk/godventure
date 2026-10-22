@@ -1,51 +1,51 @@
-keys,en,it
-Esc: skip,Esc: skip,Esc: salta
-Give %s to %s,Give %s to %s,Dai %s a %s
-Use %s with %s,Use %s with %s,Usa %s con %s
-New game,New game,Nuova partita
-Continue,Continue,Continua
-Load,Load,Carica
-Save,Save,Salva
-Settings,Settings,Impostazioni
-Quit,Quit,Esci
-Resume,Resume,Riprendi
-Main menu,Main menu,Menu principale
-Chapters,Chapters,Scegli scena
-Pause,Pause,Pausa
-Score: %d of %d,Score: %d of %d,Punteggio: %d su %d
-Game saved,Game saved,Partita salvata
-You can't save now,You can't save now,Non puoi salvare adesso
-Back,Back,Indietro
-No saved games,No saved games,Nessuna partita salvata
-Slot %d,Slot %d,Slot %d
-empty,empty,vuoto
-Text speed,Text speed,Velocità del testo
-Auto-advance text,Auto-advance text,Testo automatico
-Music volume,Music volume,Volume musica
-Effects volume,Effects volume,Volume effetti
-Fullscreen,Fullscreen,Schermo intero
-Command (help for the list),Command (help for the list),Comando (help per l'elenco)
-Inventory,Inventory,Inventario
-Inventory is empty,Inventory is empty,L'inventario è vuoto
-Nothing special.,Nothing special.,Niente di speciale.
-No answer.,No answer.,Nessuna risposta.
-I can't pick that up.,I can't pick that up.,Non posso prenderlo.
-It doesn't open.,It doesn't open.,Non si apre.
-It doesn't close.,It doesn't close.,Non si chiude.
-It won't move.,It won't move.,Non si muove.
-That doesn't work.,That doesn't work.,Non funziona.
-Walk to,Walk to,Vai a
-Give,Give,Dai
-Pick up,Pick up,Raccogli
-Use,Use,Usa
-Open,Open,Apri
-Look at,Look at,Esamina
-Push,Push,Spingi
-Close,Close,Chiudi
-Talk to,Talk to,Parla con
-Pull,Pull,Tira
-with,with,con
-to,to,a
-Menu,Menu,Menu
-I can't get there from here.,I can't get there from here.,Da qui non ci arrivo.
-Language,Language,Lingua
+keys,en,it,de,es,fr
+Esc: skip,Esc: skip,Esc: salta,Esc: überspringen,Esc: saltar,Échap : passer
+Give %s to %s,Give %s to %s,Dai %s a %s,Gib %s an %s,Dar %s a %s,Donner %s à %s
+Use %s with %s,Use %s with %s,Usa %s con %s,Benutze %s mit %s,Usar %s con %s,Utiliser %s avec %s
+New game,New game,Nuova partita,Neues Spiel,Nueva partida,Nouvelle partie
+Continue,Continue,Continua,Fortsetzen,Continuar,Continuer
+Load,Load,Carica,Laden,Cargar,Charger
+Save,Save,Salva,Speichern,Guardar,Sauvegarder
+Settings,Settings,Impostazioni,Einstellungen,Opciones,Options
+Quit,Quit,Esci,Beenden,Salir,Quitter
+Resume,Resume,Riprendi,Weiterspielen,Reanudar,Reprendre
+Main menu,Main menu,Menu principale,Hauptmenü,Menú principal,Menu principal
+Chapters,Chapters,Scegli scena,Kapitel,Capítulos,Chapitres
+Pause,Pause,Pausa,Pause,Pausa,Pause
+Score: %d of %d,Score: %d of %d,Punteggio: %d su %d,Punkte: %d von %d,Puntuación: %d de %d,Score : %d sur %d
+Game saved,Game saved,Partita salvata,Spiel gespeichert,Partida guardada,Partie sauvegardée
+You can't save now,You can't save now,Non puoi salvare adesso,Du kannst jetzt nicht speichern,Ahora no puedes guardar,Impossible de sauvegarder maintenant
+Back,Back,Indietro,Zurück,Atrás,Retour
+No saved games,No saved games,Nessuna partita salvata,Keine gespeicherten Spiele,No hay partidas guardadas,Aucune partie sauvegardée
+Slot %d,Slot %d,Slot %d,Platz %d,Ranura %d,Emplacement %d
+empty,empty,vuoto,leer,vacío,vide
+Text speed,Text speed,Velocità del testo,Textgeschwindigkeit,Velocidad del texto,Vitesse du texte
+Auto-advance text,Auto-advance text,Testo automatico,Text automatisch weiter,Avance automático del texto,Texte automatique
+Music volume,Music volume,Volume musica,Musiklautstärke,Volumen de la música,Volume de la musique
+Effects volume,Effects volume,Volume effetti,Effektlautstärke,Volumen de los efectos,Volume des effets
+Fullscreen,Fullscreen,Schermo intero,Vollbild,Pantalla completa,Plein écran
+Command (help for the list),Command (help for the list),Comando (help per l'elenco),Befehl (help für die Liste),Comando (help para la lista),Commande (help pour la liste)
+Inventory,Inventory,Inventario,Inventar,Inventario,Inventaire
+Inventory is empty,Inventory is empty,L'inventario è vuoto,Das Inventar ist leer,El inventario está vacío,L'inventaire est vide
+Nothing special.,Nothing special.,Niente di speciale.,Nichts Besonderes.,Nada especial.,Rien de spécial.
+No answer.,No answer.,Nessuna risposta.,Keine Antwort.,No hay respuesta.,Pas de réponse.
+I can't pick that up.,I can't pick that up.,Non posso prenderlo.,Das kann ich nicht nehmen.,No puedo cogerlo.,Je ne peux pas prendre ça.
+It doesn't open.,It doesn't open.,Non si apre.,Lässt sich nicht öffnen.,No se abre.,Ça ne s'ouvre pas.
+It doesn't close.,It doesn't close.,Non si chiude.,Lässt sich nicht schließen.,No se cierra.,Ça ne se ferme pas.
+It won't move.,It won't move.,Non si muove.,Es bewegt sich nicht.,No se mueve.,Ça ne bouge pas.
+That doesn't work.,That doesn't work.,Non funziona.,Das funktioniert nicht.,Eso no funciona.,Ça ne marche pas.
+Walk to,Walk to,Vai a,Gehe zu,Ir a,Aller à
+Give,Give,Dai,Gib,Dar,Donner
+Pick up,Pick up,Raccogli,Nimm,Coger,Prendre
+Use,Use,Usa,Benutze,Usar,Utiliser
+Open,Open,Apri,Öffne,Abrir,Ouvrir
+Look at,Look at,Esamina,Betrachte,Mirar,Regarder
+Push,Push,Spingi,Drücke,Empujar,Pousser
+Close,Close,Chiudi,Schließe,Cerrar,Fermer
+Talk to,Talk to,Parla con,Rede mit,Hablar con,Parler à
+Pull,Pull,Tira,Ziehe,Tirar de,Tirer
+with,with,con,mit,con,avec
+to,to,a,an,a,à
+Menu,Menu,Menu,Menü,Menú,Menu
+I can't get there from here.,I can't get there from here.,Da qui non ci arrivo.,Da komme ich von hier nicht hin.,Desde aquí no llego.,Je ne peux pas y aller d'ici.
+Language,Language,Lingua,Sprache,Idioma,Langue

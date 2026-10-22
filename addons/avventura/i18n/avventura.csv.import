@@ -6,10 +6,10 @@ uid="uid://ct5p85fbuoh26"
 
 [deps]
 
-files=["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation"]
+files=["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation", "res://addons/avventura/i18n/avventura.de.translation", "res://addons/avventura/i18n/avventura.es.translation", "res://addons/avventura/i18n/avventura.fr.translation"]
 
 source_file="res://addons/avventura/i18n/avventura.csv"
-dest_files=["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation"]
+dest_files=["res://addons/avventura/i18n/avventura.en.translation", "res://addons/avventura/i18n/avventura.it.translation", "res://addons/avventura/i18n/avventura.de.translation", "res://addons/avventura/i18n/avventura.es.translation", "res://addons/avventura/i18n/avventura.fr.translation"]
 
 [params]
 

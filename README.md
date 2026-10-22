@@ -122,7 +122,7 @@ addons/avventura/
   nodes/     AdvRoom, AdvHotspot, AdvCharacter, AdvWalkArea, AdvEntry
   gui/       interfaccia a due clic, interfaccia SCUMM, componenti comuni
   editor/    scheda "Avventura", evidenziazione della sintassi, esportazione
-  i18n/      testi dell'interfaccia (inglese, italiano)
+  i18n/      testi dell'interfaccia (inglese, italiano, tedesco, spagnolo, francese)
 game/        il gioco dimostrativo
 tests/       test unitari e fixture di regressione del motore
 tools/       CLI e server MCP
