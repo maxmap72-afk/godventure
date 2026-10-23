@@ -2,7 +2,9 @@ class_name AdvGui
 extends CanvasLayer
 ## Base class of the player interfaces: speech, dialog choices, the name of what is under
 ## the mouse, menus (title, pause, save/load, settings), hotspot hints (hold Tab) and the
-## debug console (the key left of 1, or F12). Clicks become engine actions in
+## debug console (the key left of 1, or F12). On touch screens, where there is no Esc key, a
+## button in the top right corner (and Android's back button) opens the pause menu or skips a
+## cutscene. Clicks become engine actions in
 ## [method click_world]; subclasses choose the interaction style:
 ##   TwoClickGui - left click acts, right click looks (default)
 ##   ScummGui    - classic nine verbs panel
@@ -30,6 +32,8 @@ var toast: Label
 var skip_hint: Label
 var item_cursor: Control
 var hints: Control
+## The on-screen button that does what Esc does (touch screens only).
+var menu_button: Button
 
 var hovered_hotspot: AdvHotspot
 var hovered_item := ""
@@ -47,11 +51,14 @@ var _title_image := false
 var _toast_tween: Tween
 var _in_menu := false
 var _dim: ColorRect
+var _menu_title := ""
 
 
 func _ready() -> void:
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Android's back button opens the menu instead of closing the game (see _notification)
+	get_tree().set_quit_on_go_back(false)
 	Adv.apply_language()
 	Adv.language_changed.connect(func(_c): retranslate())
 	root = Control.new()
@@ -190,6 +197,7 @@ func _build_overlays() -> void:
 		if Adv.selected_item != "":
 			AdvItemSlot.draw_icon(item_cursor, Adv.selected_item, Rect2(Vector2.ZERO, item_cursor.size)))
 	root.add_child(item_cursor)
+	_build_menu_button()
 	toast = _outlined_label(22, Color.WHITE)
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -222,6 +230,77 @@ func _build_overlays() -> void:
 	_menu_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(_menu_center)
 	_build_console()
+
+
+## True on phones and tablets (and any device with a touch screen): there is no Esc key there.
+static func is_touch_device() -> bool:
+	return OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
+
+
+## A round button in the top right corner for touch screens: three bars (the menu) or, during
+## a cutscene, a "skip" arrow. It does what Esc does.
+func _build_menu_button() -> void:
+	menu_button = Button.new()
+	menu_button.name = "MenuButton"
+	menu_button.focus_mode = Control.FOCUS_NONE
+	menu_button.custom_minimum_size = Vector2(64, 64)
+	menu_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	menu_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	menu_button.offset_right = -12
+	menu_button.offset_top = 12
+	menu_button.modulate.a = 0.75
+	var round := StyleBoxFlat.new()
+	round.bg_color = Color(0, 0, 0, 0.45)
+	round.set_corner_radius_all(32)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		menu_button.add_theme_stylebox_override(state, round)
+	menu_button.pressed.connect(send_escape)
+	menu_button.draw.connect(func():
+		var c := menu_button.size / 2.0
+		var col := Color(1, 1, 1, 0.9)
+		if Adv.in_cutscene() or Adv.is_playing_video():
+			for dx in [-10.0, 4.0]:
+				menu_button.draw_colored_polygon(PackedVector2Array([c + Vector2(dx, -10), c + Vector2(dx + 12, 0), c + Vector2(dx, 10)]), col)
+		else:
+			for dy in [-10.0, 0.0, 10.0]:
+				menu_button.draw_line(c + Vector2(-14, dy), c + Vector2(14, dy), col, 4.0))
+	menu_button.visible = false
+	root.add_child(menu_button)
+
+
+func _update_menu_button() -> void:
+	if menu_button == null:
+		return
+	var show := is_touch_device() and Adv.room != null and not _in_menu and not title_mode
+	if menu_button.visible != show:
+		menu_button.visible = show
+	if show:
+		menu_button.queue_redraw()
+
+
+## Android's back button (and the back gesture) works like Esc; on the title menu it closes the
+## game, as players expect, or goes back from a submenu.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+		return
+	if title_mode and _in_menu:
+		if _menu_title == "":
+			get_tree().quit()
+		else:
+			show_title()
+	else:
+		send_escape()
+
+
+## Presses Esc, as if from a keyboard: whatever is on top (a mini-game, a close-up, a menu, a
+## cutscene) handles it the way it handles the real key.
+func send_escape() -> void:
+	for pressed in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = KEY_ESCAPE
+		ev.physical_keycode = KEY_ESCAPE
+		ev.pressed = pressed
+		Input.parse_input_event(ev)
 
 
 func _full_rect_control() -> Control:
@@ -257,6 +336,7 @@ func _process(_delta: float) -> void:
 		hints.queue_redraw()
 	elif hints.visible:
 		hints.visible = false
+	_update_menu_button()
 	_update_hover(mp)
 
 
@@ -496,7 +576,7 @@ func _on_choice_requested(options: Array) -> void:
 
 
 func _on_cutscene_changed(active: bool) -> void:
-	skip_hint.visible = active
+	skip_hint.visible = active and not is_touch_device()
 
 
 func _on_game_ended() -> void:
@@ -529,6 +609,7 @@ func _draw_hints() -> void:
 ## entries: [[label, Callable or null], ...]
 func open_menu(title: String, entries: Array, subtitle := "") -> VBoxContainer:
 	_in_menu = true
+	_menu_title = title
 	menu_layer.visible = true
 	_dim.color.a = 0.12 if title_mode else 0.55
 	# Over a title picture the menu sits in the lower-left corner, so the picture stays visible.

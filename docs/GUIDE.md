@@ -518,6 +518,11 @@ Controls common to all interfaces:
 | F5 / F9 | quick save / quick load |
 | \ (the key left of 1) or F12 | debug console (debug builds only) |
 
+**Phones and tablets.** Touch devices have no Esc key: a round button in the top right corner
+does the same (three bars: opens the pause menu; during a cutscene it turns into a ▶▶ arrow and
+skips it). On Android the Back button or gesture also counts as Esc, and on the title menu it
+closes the game. A tap works as a left click.
+
 **Customizing.** The exported properties of the `two_click_gui.tscn` and `scumm_gui.tscn`
 scenes (font sizes, colors, verbs) are changed in the inspector; `gui_theme` accepts a Godot
 theme. For a brand-new interface (for example a "verb coin") extend `AdvGui` and override

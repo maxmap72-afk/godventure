@@ -515,6 +515,11 @@ Comandi comuni a tutte le interfacce:
 | F5 / F9 | salvataggio / caricamento rapido |
 | \ (tasto a sinistra dell'1) o F12 | console di debug (solo nelle build di debug) |
 
+**Telefoni e tablet.** Sui dispositivi touch non c'è il tasto Esc: in alto a destra compare un
+pulsante rotondo che fa la stessa cosa (tre righe: apre il menu di pausa; durante una cutscene
+diventa una freccia ▶▶ e la salta). Su Android anche il tasto o il gesto «Indietro» vale come
+Esc, e nel menu del titolo chiude il gioco. Il tocco funziona come il clic sinistro.
+
 **Personalizzare.** Le proprietà esportate delle scene `two_click_gui.tscn` e
 `scumm_gui.tscn` (dimensioni dei caratteri, colori, verbi) si cambiano dall'ispettore;
 `gui_theme` accetta un tema Godot. Per un'interfaccia tutta nuova (per esempio una "verb
